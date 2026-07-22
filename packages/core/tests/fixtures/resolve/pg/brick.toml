@@ -1,0 +1,7 @@
+[brick]
+name    = "pg"
+slot    = "db"
+summary = "Postgres"
+
+[provides]
+capabilities = ["sql-db"]

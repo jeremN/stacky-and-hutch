@@ -1,0 +1,7 @@
+[brick]
+name    = "needs-cache"
+slot    = "cache"
+summary = "Requires a capability nobody provides"
+
+[requires]
+kv-store = "*"
