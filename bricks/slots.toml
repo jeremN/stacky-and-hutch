@@ -1,0 +1,3 @@
+# Placeholder slot registry for the (not-yet-created) real bricks.
+# Task 9 replaces this with the full slot list once bricks/sveltekit,
+# bricks/compose, bricks/caddy and bricks/postgres exist.

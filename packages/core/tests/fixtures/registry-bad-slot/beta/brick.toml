@@ -1,0 +1,4 @@
+[brick]
+name    = "beta"
+slot    = "cache"
+summary = "Brick with an undeclared slot"

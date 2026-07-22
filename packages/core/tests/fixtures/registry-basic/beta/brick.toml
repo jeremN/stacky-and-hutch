@@ -1,0 +1,7 @@
+[brick]
+name    = "beta"
+slot    = "db"
+summary = "Payload-free capability provider for fixtures"
+
+[provides]
+capabilities = ["sql-db"]

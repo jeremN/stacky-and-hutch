@@ -1,0 +1,22 @@
+[brick]
+name    = "alpha"
+slot    = "web"
+summary = "Test brick alpha"
+
+[requires]
+sql-db = "*"
+
+[provides]
+capabilities = ["ssr"]
+
+[params]
+port = { type = "string", default = "5173" }
+
+[[files]]
+from = "files/a.txt"
+to   = "app/a.txt"
+
+[[fragments]]
+target   = "ops/compose.yml"
+from     = "fragments/compose.yaml"
+strategy = "yaml"
