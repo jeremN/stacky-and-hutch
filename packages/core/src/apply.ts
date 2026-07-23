@@ -29,6 +29,8 @@ export async function apply(ops: FileOp[], projectDir: string, graph: Graph): Pr
   }
 
   const files: LockEntry[] = []
+  const injectedPaths = new Set<string>()
+  for (const op of ops) if (op.kind === 'inject') injectedPaths.add(op.path)
 
   for (const op of ops) {
     switch (op.kind) {
@@ -43,7 +45,17 @@ export async function apply(ops: FileOp[], projectDir: string, graph: Graph): Pr
         break
       case 'inject': {
         const abs = join(projectDir, op.path)
-        const host = await readFile(abs, 'utf8')
+        // The host can already be gone: an earlier op in this same batch may have
+        // deleted it (its owning brick was removed alongside the one injecting into
+        // it), or — for a strip of an orphaned injection — it may never come back.
+        // Either way there is nothing left to inject into; skip rather than crash.
+        let host: string
+        try {
+          host = await readFile(abs, 'utf8')
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'ENOENT') break
+          throw err
+        }
         const next = applyMarker(host, op.marker, op.contents)
         await writeFile(abs, next, 'utf8')
         if (op.contents.length > 0) {
@@ -59,6 +71,15 @@ export async function apply(ops: FileOp[], projectDir: string, graph: Graph): Pr
       case 'conflict':
         break
     }
+  }
+
+  // A file can be both brick-owned and an injection host (e.g. sveltekit creates
+  // hooks.server.ts, postgres injects into it). Its lock hash must reflect the final
+  // on-disk bytes, not the pre-injection contents recorded when the create/overwrite
+  // op ran — otherwise the very next `plan` sees drift and reports a false conflict.
+  for (const entry of files) {
+    if (entry.tier === 'inject' || !injectedPaths.has(entry.path)) continue
+    entry.hash = hashContents(await readFile(join(projectDir, entry.path), 'utf8'))
   }
 
   const bricks = Object.fromEntries(graph.bricks.map((b) => [b.brick.name, b.params]))
