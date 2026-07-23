@@ -35,9 +35,10 @@ describe('cli', () => {
     expect(code).toBe(2)
   })
 
-  it('exits 1 for an unknown brick', async () => {
+  it('exits 1 for an unknown brick and does not write stack.toml', async () => {
     const dir = await project()
     expect(await runCli(argv(dir, 'add', 'nope'))).toBe(1)
+    await expect(readFile(join(dir, 'stack.toml'), 'utf8')).rejects.toThrow()
   })
 
   it('remove reverses add', async () => {

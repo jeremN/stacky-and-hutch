@@ -57,3 +57,47 @@ describe('plan + apply', () => {
     expect(await readFile(join(dir, 'app/a.txt.stacky-new'), 'utf8')).toBe('theirs\n')
   })
 })
+
+describe('real registry: a file that is both brick-owned and an inject host', () => {
+  const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
+
+  it('is not flagged as drifted on the very next plan', async () => {
+    const reg = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { sveltekit: {}, postgres: {} }, overrides: {} }, reg)
+    if (!r.ok) throw new Error(JSON.stringify(r.errors))
+
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-apply-real-'))
+    const first = await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} })
+    const lock = await apply(first, dir, r.graph)
+
+    // sveltekit creates app/src/hooks.server.ts; postgres injects into it. If the lock
+    // hash for that brick-owned entry were recorded from the pre-injection contents
+    // (rather than the final on-disk bytes), this second plan would see drift and
+    // report a 'conflict' for it instead of the routine re-render every still-wanted
+    // brick file gets (an 'overwrite' op is normal here — it's what a clean, wanted,
+    // locked brick file always plans as; only 'conflict' signals the bug).
+    const second = await plan(r.graph, { projectDir: dir, lock, overrides: {} })
+    expect(hasConflicts(second)).toBe(false)
+    const hostOps = second.filter((op) => op.path === 'app/src/hooks.server.ts')
+    expect(hostOps.some((op) => op.kind === 'conflict')).toBe(false)
+  })
+
+  it('removing the host-owning brick and the injecting brick together does not throw', async () => {
+    const reg = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { sveltekit: {}, postgres: {} }, overrides: {} }, reg)
+    if (!r.ok) throw new Error(JSON.stringify(r.errors))
+
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-apply-real-'))
+    const first = await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} })
+    const lock = await apply(first, dir, r.graph)
+
+    // Converging to an empty manifest puts both a `delete` for the inject host and an
+    // orphan-strip `inject` for the same path in one batch. The delete runs first, so
+    // the strip must tolerate a host that is already gone rather than crash reading it.
+    const empty = resolve({ bricks: {}, overrides: {} }, reg)
+    if (!empty.ok) throw new Error(JSON.stringify(empty.errors))
+    const removal = await plan(empty.graph, { projectDir: dir, lock, overrides: {} })
+    const finalLock = await apply(removal, dir, empty.graph)
+    expect(finalLock.files).toEqual([])
+  })
+})

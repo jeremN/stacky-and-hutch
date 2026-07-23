@@ -1,5 +1,5 @@
 import {
-  apply as applyOps, emptyLock, exitCodeFor, formatError, hasConflicts,
+  apply as applyOps, exitCodeFor, formatError, hasConflicts,
   loadRegistry, plan as planOps, readLock, readManifest, resolve,
 } from '@stacky/core'
 import { isDirty } from '../git.js'
@@ -51,5 +51,3 @@ export async function runPlanApply(opts: RunOpts): Promise<number> {
   console.log(opts.json ? jsonPlan(ops) : renderPlan(ops))
   return 0
 }
-
-export { emptyLock }
