@@ -1,0 +1,10 @@
+[brick]
+name    = "web-a"
+slot    = "web"
+summary = "Web A"
+
+[requires]
+sql-db = "*"
+
+[params]
+title = { type = "string", prompt = "Site title" }

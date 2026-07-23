@@ -1,0 +1,7 @@
+[brick]
+name    = "mysql"
+slot    = "db"
+summary = "MySQL"
+
+[provides]
+capabilities = ["sql-db"]

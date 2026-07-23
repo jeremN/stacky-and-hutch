@@ -1,0 +1,16 @@
+# Slot order here IS the merge order for composed files. Changing it rewrites diffs.
+[[slot]]
+name = "container"
+single = true
+
+[[slot]]
+name = "web"
+single = true
+
+[[slot]]
+name = "edge"
+single = true
+
+[[slot]]
+name = "db"
+single = true

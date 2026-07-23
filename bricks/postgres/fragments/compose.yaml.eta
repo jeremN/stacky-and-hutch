@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:<%= it.version %>-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app
+volumes:
+  pgdata: {}

@@ -1,0 +1,10 @@
+{
+  "name": "@stacky/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": { "stacky": "./src/index.ts" },
+  "dependencies": {
+    "@stacky/core": "workspace:*",
+    "cac": "^7.0.0"
+  }
+}

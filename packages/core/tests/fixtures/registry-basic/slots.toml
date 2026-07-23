@@ -1,0 +1,11 @@
+[[slot]]
+name = "container"
+single = true
+
+[[slot]]
+name = "web"
+single = true
+
+[[slot]]
+name = "db"
+single = true

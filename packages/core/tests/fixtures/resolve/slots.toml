@@ -1,0 +1,11 @@
+[[slot]]
+name = "web"
+single = true
+
+[[slot]]
+name = "db"
+single = true
+
+[[slot]]
+name = "cache"
+single = true

@@ -1,0 +1,33 @@
+[brick]
+name    = "postgres"
+slot    = "db"
+summary = "Postgres service, connection helper, and a migrations folder"
+
+[requires]
+container-runtime = "*"
+ssr                = "*"
+
+[provides]
+capabilities = ["sql-db"]
+
+[params]
+version = { type = "string", default = "16" }
+
+[[files]]
+from = "files/0001_init.sql"
+to   = "db/migrations/0001_init.sql"
+
+[[fragments]]
+target   = "ops/compose.yml"
+from     = "fragments/compose.yaml.eta"
+strategy = "yaml"
+
+[[fragments]]
+target   = "config/.env.example"
+from     = "fragments/env"
+strategy = "lines"
+
+[[inject]]
+target = "app/src/hooks.server.ts"
+marker = "stacky:server-init"
+from   = "fragments/server-init.ts"

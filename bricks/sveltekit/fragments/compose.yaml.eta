@@ -1,0 +1,7 @@
+services:
+  web:
+    build: ../app
+    ports:
+      - "<%= it.port %>:<%= it.port %>"
+    networks:
+      - app

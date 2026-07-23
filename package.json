@@ -1,0 +1,17 @@
+{
+  "name": "stacky-and-hutch",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:artifacts": "vitest run packages/core/tests/artifacts.test.ts",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10",
+    "@types/node": "^22.10.0"
+  }
+}

@@ -1,0 +1,4 @@
+[brick]
+name    = "web-b"
+slot    = "web"
+summary = "Web B"
