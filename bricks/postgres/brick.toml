@@ -5,6 +5,7 @@ summary = "Postgres service, connection helper, and a migrations folder"
 
 [requires]
 container-runtime = "*"
+ssr                = "*"
 
 [provides]
 capabilities = ["sql-db"]
