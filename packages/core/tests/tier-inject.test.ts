@@ -26,6 +26,24 @@ describe('applyMarker', () => {
   it('throws when the marker is absent from the host', () => {
     expect(() => applyMarker('no markers here', 'stacky:auth', 'x')).toThrow(/marker "stacky:auth" not found/)
   })
+
+  it('does not cross-match a marker that is a prefix of a different marker', () => {
+    const host = ['// >>> stacky:auth2', '// <<< stacky:auth2'].join('\n')
+    expect(() => applyMarker(host, 'stacky:auth', 'x')).toThrow(/marker "stacky:auth" not found/)
+  })
+
+  it('fills only the targeted marker when a prefix-sharing marker also exists', () => {
+    const both = ['// >>> stacky:auth', '// <<< stacky:auth', '', '// >>> stacky:auth2', '// <<< stacky:auth2'].join(
+      '\n',
+    )
+    const filledA = applyMarker(both, 'stacky:auth', 'A')
+    expect(filledA).toContain('// >>> stacky:auth\nA\n// <<< stacky:auth')
+    expect(filledA).toContain('// >>> stacky:auth2\n// <<< stacky:auth2')
+
+    const filledB = applyMarker(both, 'stacky:auth2', 'B')
+    expect(filledB).toContain('// >>> stacky:auth2\nB\n// <<< stacky:auth2')
+    expect(filledB).toContain('// >>> stacky:auth\n// <<< stacky:auth')
+  })
 })
 
 describe('stripMarker', () => {

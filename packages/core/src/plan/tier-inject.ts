@@ -7,7 +7,9 @@ import type { PlanContext } from './tier-brick.js'
 function region(marker: string): { open: RegExp; openText: string; closeText: string } {
   const esc = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return {
-    open: new RegExp(`([^\\n]*>>>\\s*${esc}[^\\n]*\\n)([\\s\\S]*?)([^\\n]*<<<\\s*${esc}[^\\n]*)`),
+    open: new RegExp(
+      `([^\\n]*>>>\\s*${esc}(?![\\w:.\\-])[^\\n]*\\n)([\\s\\S]*?)([^\\n]*<<<\\s*${esc}(?![\\w:.\\-])[^\\n]*)`,
+    ),
     openText: `>>> ${marker}`,
     closeText: `<<< ${marker}`,
   }
