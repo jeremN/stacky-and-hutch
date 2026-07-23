@@ -29,6 +29,12 @@ describe('mergeYaml', () => {
     const frags = ['services:\n  b:\n    image: b\n', 'services:\n  a:\n    image: a\n']
     expect(mergeYaml(frags)).toBe(mergeYaml(frags))
   })
+
+  it('is byte-stable regardless of fragment arrival order', () => {
+    const a = mergeYaml(['services:\n  b:\n    image: b\n', 'services:\n  a:\n    image: a\n'])
+    const b = mergeYaml(['services:\n  a:\n    image: a\n', 'services:\n  b:\n    image: b\n'])
+    expect(a).toBe(b)
+  })
 })
 
 describe('mergeLines', () => {

@@ -27,6 +27,11 @@ export async function planComposedFiles(graph: Graph, ctx: PlanContext): Promise
 
   for (const [target, contributions] of byTarget) {
     const strategy = contributions[0]!.strategy
+    const mismatch = contributions.find((c) => c.strategy !== strategy)
+    if (mismatch) {
+      const names = contributions.map((c) => `${c.brick}(${c.strategy})`).join(', ')
+      throw new Error(`bricks disagree on merge strategy for "${target}": ${names}`)
+    }
     let contents =
       strategy === 'yaml'
         ? mergeYaml(contributions.map((c) => c.text))

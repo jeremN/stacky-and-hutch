@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +7,7 @@ import { loadRegistry } from '../src/registry.js'
 import { resolve } from '../src/resolve.js'
 import { emptyLock } from '../src/lockfile.js'
 import { planComposedFiles } from '../src/plan/tier-composed.js'
-import type { Graph } from '../src/types.js'
+import type { Graph, ResolvedBrick } from '../src/types.js'
 
 const fixture = fileURLToPath(new URL('./fixtures/registry-basic', import.meta.url))
 let graph: Graph
@@ -48,5 +48,37 @@ describe('planComposedFiles', () => {
     }
     const ops = await planComposedFiles(graph, { projectDir: dir, lock, overrides: {} })
     expect(ops).toContainEqual({ kind: 'delete', path: 'ops/gone.yml', owner: '@composed' })
+  })
+
+  it('rejects a composed target where bricks disagree on merge strategy', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-t2-'))
+    const bricksDir = await mkdtemp(join(tmpdir(), 'stacky-t2-bricks-'))
+    await writeFile(join(bricksDir, 'a.yaml'), 'services:\n  a:\n    image: a\n', 'utf8')
+    await writeFile(join(bricksDir, 'b.env'), 'FOO=1\n', 'utf8')
+
+    const mkBrick = (name: string, strategy: 'yaml' | 'lines', from: string): ResolvedBrick => ({
+      brick: {
+        name,
+        slot: name,
+        summary: '',
+        dir: bricksDir,
+        requires: {},
+        provides: [],
+        params: {},
+        files: [],
+        fragments: [{ target: 'ops/mixed.yml', from, strategy }],
+        inject: [],
+      },
+      params: {},
+      inferred: false,
+    })
+
+    const mismatchedGraph: Graph = {
+      bricks: [mkBrick('alpha2', 'yaml', 'a.yaml'), mkBrick('beta2', 'lines', 'b.env')],
+    }
+
+    await expect(
+      planComposedFiles(mismatchedGraph, { projectDir: dir, lock: emptyLock(), overrides: {} }),
+    ).rejects.toThrow(/ops\/mixed\.yml/)
   })
 })
