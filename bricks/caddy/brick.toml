@@ -1,0 +1,28 @@
+[brick]
+name    = "caddy"
+slot    = "edge"
+summary = "Caddy reverse proxy in front of the app"
+
+[requires]
+http-origin       = "*"
+container-runtime = "*"
+
+[provides]
+capabilities = ["http-edge"]
+
+[params]
+domain = { type = "string", default = "localhost" }
+
+[[files]]
+from = "files/Caddyfile.eta"
+to   = "ops/caddy/Caddyfile"
+
+[[fragments]]
+target   = "ops/compose.yml"
+from     = "fragments/compose.yaml"
+strategy = "yaml"
+
+[[fragments]]
+target   = "config/.env.example"
+from     = "fragments/env.eta"
+strategy = "lines"

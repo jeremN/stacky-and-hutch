@@ -1,0 +1,5 @@
+name: stacky-app
+services: {}
+networks:
+  app:
+    driver: bridge

@@ -1,0 +1,17 @@
+[brick]
+name    = "compose"
+slot    = "container"
+summary = "Docker Compose base — every containerised brick contributes services here"
+
+[provides]
+capabilities = ["container-runtime"]
+
+[[fragments]]
+target   = "ops/compose.yml"
+from     = "fragments/base.yaml"
+strategy = "yaml"
+
+[[fragments]]
+target   = "config/.env.example"
+from     = "fragments/env"
+strategy = "lines"
