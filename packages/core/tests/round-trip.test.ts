@@ -150,6 +150,16 @@ describe('golden files — per framework', () => {
     await expect(layout).toMatchFileSnapshot('./golden/sveltekit.layout.svelte')
   })
 
+  it('[tanstack-start] app shell publishes the styling seams', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-shell-rx-'))
+    await converge(dir, { bricks: { vite: {}, 'tanstack-start': {} }, overrides: {} })
+    const root = await readFile(join(dir, 'app/src/routes/__root.tsx'), 'utf8')
+    expect(root).toContain('>>> stacky:app-head')
+    expect(root).toContain('>>> stacky:app-shell')
+    expect(root).toContain('<Outlet />')
+    await expect(root).toMatchFileSnapshot('./golden/tanstack.root.tsx')
+  })
+
   it('[sveltekit] sqlite stack matches the committed goldens', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-sqlite-'))
     await converge(dir, { bricks: { vite: {}, sveltekit: {}, sqlite: {}, drizzle: {} }, overrides: {} })
