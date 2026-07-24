@@ -15,8 +15,12 @@ single = true
 name = "edge"
 single = true
 
-# db is multi-occupancy: it hosts the engine (postgres) AND the ORM (drizzle).
-# Two engines are still caught by capability ambiguity when an ORM consumes sql-db.
+# Engines are mutually exclusive: at most one database engine per project.
 [[slot]]
-name = "db"
-single = false
+name = "db-engine"
+single = true
+
+# The ORM sits in its own single slot and selects its engine wiring via `when`.
+[[slot]]
+name = "orm"
+single = true

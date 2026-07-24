@@ -1,0 +1,6 @@
+[brick]
+name = "off"
+slot = "flag"
+
+[provides]
+capabilities = ["feature-off"]

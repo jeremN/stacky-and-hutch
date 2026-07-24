@@ -1,0 +1,32 @@
+[brick]
+name = "base"
+slot = "host"
+
+[[injection_points]]
+name   = "seam"
+target = "app.ts"
+marker = "gate:seam"
+
+[[files]]
+from = "files/app.ts"
+to   = "app.ts"
+
+[[files]]
+from = "files/conf.on.txt"
+to   = "conf.txt"
+when = "feature-on"
+
+[[files]]
+from = "files/conf.off.txt"
+to   = "conf.txt"
+when = "feature-off"
+
+[[inject]]
+point = "seam"
+from  = "fragments/seam.on.ts"
+when  = "feature-on"
+
+[[inject]]
+point = "seam"
+from  = "fragments/seam.off.ts"
+when  = "feature-off"

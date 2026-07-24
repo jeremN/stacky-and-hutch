@@ -1,0 +1,25 @@
+[brick]
+name    = "sqlite"
+slot    = "db-engine"
+summary = "SQLite (better-sqlite3) — an embedded, service-less database engine"
+
+[provides]
+capabilities = ["sql-db", "sqlite-driver"]
+
+[[fragments]]
+target   = "config/.env.example"
+from     = "fragments/env"
+strategy = "lines"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[files]]
+from = "files/.gitkeep"
+to   = "data/.gitkeep"
+
+[[inject]]
+point = "server-init"
+from  = "fragments/server-init.ts"

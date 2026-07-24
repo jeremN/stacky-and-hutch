@@ -4,6 +4,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { BANNER_YAML, deepMerge, mergeJson, mergeLines, mergeYaml, stringifyJson } from '../merge.js'
 import { renderTemplate } from '../template.js'
 import type { FileOp, Graph } from '../types.js'
+import { gatePasses, providedCapabilities } from './gate.js'
 import type { PlanContext } from './tier-brick.js'
 
 interface Contribution { brick: string; text: string; strategy: 'yaml' | 'lines' | 'json' }
@@ -11,9 +12,11 @@ interface Contribution { brick: string; text: string; strategy: 'yaml' | 'lines'
 export async function planComposedFiles(graph: Graph, ctx: PlanContext): Promise<FileOp[]> {
   // target path -> contributions, already in graph order (stable)
   const byTarget = new Map<string, Contribution[]>()
+  const provided = providedCapabilities(graph)
 
   for (const { brick, params } of graph.bricks) {
     for (const spec of brick.fragments) {
+      if (!gatePasses(spec.when, provided)) continue
       const raw = await readFile(join(brick.dir, spec.from), 'utf8')
       const text = spec.from.endsWith('.eta') ? renderTemplate(raw, params) : raw
       byTarget.set(spec.target, [

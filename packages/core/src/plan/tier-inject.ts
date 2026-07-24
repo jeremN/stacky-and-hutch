@@ -2,6 +2,7 @@ import { access, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { renderTemplate } from '../template.js'
 import type { FileOp, Graph } from '../types.js'
+import { gatePasses, providedCapabilities } from './gate.js'
 import type { PlanContext } from './tier-brick.js'
 
 function region(marker: string): { open: RegExp; openText: string; closeText: string } {
@@ -44,9 +45,11 @@ export async function planInjections(graph: Graph, ctx: PlanContext): Promise<Fi
   const ops: FileOp[] = []
   // "target#marker" -> contributors, collected in graph order (stable).
   const byMarker = new Map<string, { target: string; marker: string; parts: string[] }>()
+  const provided = providedCapabilities(graph)
 
   for (const { brick, params } of graph.bricks) {
     for (const spec of brick.inject) {
+      if (!gatePasses(spec.when, provided)) continue
       const { target, marker } = spec.point
         ? resolvePoint(graph, spec.point)
         : { target: spec.target!, marker: spec.marker! }

@@ -1,6 +1,6 @@
 [brick]
 name    = "drizzle"
-slot    = "db"
+slot    = "orm"
 summary = "Drizzle ORM — schema, config, and a typed client"
 
 [requires]
@@ -10,12 +10,22 @@ sql-db = "*"
 capabilities = ["orm"]
 
 [[files]]
-from = "files/schema.ts"
+from = "files/schema.pg.ts"
 to   = "db/schema.ts"
+when = "pg-driver"
+[[files]]
+from = "files/schema.sqlite.ts"
+to   = "db/schema.ts"
+when = "sqlite-driver"
 
 [[files]]
-from = "files/drizzle.config.ts"
+from = "files/drizzle.config.pg.ts"
 to   = "app/drizzle.config.ts"
+when = "pg-driver"
+[[files]]
+from = "files/drizzle.config.sqlite.ts"
+to   = "app/drizzle.config.ts"
+when = "sqlite-driver"
 
 [[fragments]]
 target   = "app/package.json"
@@ -24,4 +34,9 @@ strategy = "json"
 
 [[inject]]
 point = "server-init"
-from  = "fragments/server-init.ts"
+from  = "fragments/server-init.pg.ts"
+when  = "pg-driver"
+[[inject]]
+point = "server-init"
+from  = "fragments/server-init.sqlite.ts"
+when  = "sqlite-driver"
