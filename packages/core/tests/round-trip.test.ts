@@ -9,7 +9,6 @@ import type { Manifest } from '../src/types.js'
 
 const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
 
-/** Converge a project directory onto a manifest. */
 async function converge(dir: string, manifest: Manifest) {
   const registry = await loadRegistry(bricksDir)
   await writeManifest(dir, manifest)
@@ -20,30 +19,59 @@ async function converge(dir: string, manifest: Manifest) {
   await apply(ops, dir, r.graph)
 }
 
-const BASE: Manifest = { bricks: { sveltekit: {} }, overrides: {} }
+const FRAMEWORKS = ['sveltekit', 'tanstack-start'] as const
+// The foundation is fixed per stack and never round-tripped.
+const FOUNDATION = new Set<string>(['vite', 'compose', ...FRAMEWORKS])
 
-describe('round trip', () => {
-  for (const brick of ['caddy', 'postgres']) {
-    it(`add ${brick} then remove ${brick} restores the tree byte for byte`, async () => {
-      const dir = await mkdtemp(join(tmpdir(), `stacky-rt-${brick}-`))
+describe('round trip — both framework stacks', () => {
+  for (const fw of FRAMEWORKS) {
+    const base: Manifest = { bricks: { vite: {}, [fw]: {} }, overrides: {} }
 
-      await converge(dir, structuredClone(BASE))
-      const before = await snapshotTree(dir)
+    // Derive removable bricks from the registry: everything not in the foundation.
+    it(`[${fw}] every removable brick round-trips byte for byte`, async () => {
+      const registry = await loadRegistry(bricksDir)
+      const removable = [...registry.bricks.values()]
+        .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
+        .map((b) => b.name)
+        .sort()
+      expect(removable).toEqual(['caddy', 'drizzle', 'postgres'])
 
-      await converge(dir, { bricks: { ...BASE.bricks, [brick]: {} }, overrides: {} })
-      const during = await snapshotTree(dir)
-      expect(Object.keys(during).length).toBeGreaterThan(Object.keys(before).length)
+      for (const brick of removable) {
+        const dir = await mkdtemp(join(tmpdir(), `stacky-rt-${fw}-${brick}-`))
+        await converge(dir, structuredClone(base))
+        const before = await snapshotTree(dir)
 
-      await converge(dir, structuredClone(BASE))
-      const after = await snapshotTree(dir)
+        await converge(dir, { bricks: { ...base.bricks, [brick]: {} }, overrides: {} })
+        const during = await snapshotTree(dir)
+        expect(Object.keys(during).length).toBeGreaterThan(Object.keys(before).length)
 
-      expect(after).toEqual(before)
+        await converge(dir, structuredClone(base))
+        expect(await snapshotTree(dir)).toEqual(before)
+      }
     })
   }
 
+  it('[sveltekit] removing drizzle leaves postgres server-init intact', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-rt-multi-'))
+    const withPg: Manifest = { bricks: { vite: {}, sveltekit: {}, postgres: {} }, overrides: {} }
+    await converge(dir, structuredClone(withPg))
+    const before = await snapshotTree(dir)
+
+    await converge(dir, { bricks: { ...withPg.bricks, drizzle: {} }, overrides: {} })
+    const hooks = await readFile(join(dir, 'app/src/hooks.server.ts'), 'utf8')
+    expect(hooks).toContain('new Pool')
+    expect(hooks).toContain('drizzle(')
+
+    await converge(dir, structuredClone(withPg))
+    expect(await snapshotTree(dir)).toEqual(before)
+    const after = await readFile(join(dir, 'app/src/hooks.server.ts'), 'utf8')
+    expect(after).toContain('new Pool')
+    expect(after).not.toContain('drizzle(')
+  })
+
   it('applying the same manifest twice changes nothing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-rt-idem-'))
-    const full: Manifest = { bricks: { sveltekit: {}, caddy: {}, postgres: {} }, overrides: {} }
+    const full: Manifest = { bricks: { vite: {}, sveltekit: {}, caddy: {}, postgres: {}, drizzle: {} }, overrides: {} }
     await converge(dir, structuredClone(full))
     const first = await snapshotTree(dir)
     await converge(dir, structuredClone(full))
@@ -52,8 +80,8 @@ describe('round trip', () => {
 
   it('a removed brick leaves no orphan files behind', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-rt-orphan-'))
-    await converge(dir, { bricks: { sveltekit: {}, postgres: {} }, overrides: {} })
-    await converge(dir, structuredClone(BASE))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, postgres: {} }, overrides: {} })
+    await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
     const paths = Object.keys(await snapshotTree(dir))
     expect(paths.filter((p) => p.startsWith('db/'))).toEqual([])
     const manifest = await readManifest(dir)
@@ -61,18 +89,18 @@ describe('round trip', () => {
   })
 })
 
-describe('golden files', () => {
-  it('the full stack produces the committed compose file byte for byte', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-'))
-    await converge(dir, { bricks: { sveltekit: {}, caddy: {}, postgres: {} }, overrides: {} })
-    const compose = await readFile(join(dir, 'ops/compose.yml'), 'utf8')
-    await expect(compose).toMatchFileSnapshot('./golden/full-stack.compose.yml')
-  })
-
-  it('the full stack produces the committed env example byte for byte', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-'))
-    await converge(dir, { bricks: { sveltekit: {}, caddy: {}, postgres: {} }, overrides: {} })
-    const env = await readFile(join(dir, 'config/.env.example'), 'utf8')
-    await expect(env).toMatchFileSnapshot('./golden/full-stack.env.example')
-  })
+describe('golden files — per framework', () => {
+  for (const fw of FRAMEWORKS) {
+    const short = fw === 'sveltekit' ? 'sveltekit' : 'tanstack'
+    it(`[${fw}] full stack matches the committed goldens`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-golden-${short}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, caddy: {}, postgres: {}, drizzle: {} }, overrides: {} })
+      await expect(await readFile(join(dir, 'ops/compose.yml'), 'utf8'))
+        .toMatchFileSnapshot(`./golden/${short}.compose.yml`)
+      await expect(await readFile(join(dir, 'app/package.json'), 'utf8'))
+        .toMatchFileSnapshot(`./golden/${short}.package.json`)
+      await expect(await readFile(join(dir, 'app/vite.config.ts'), 'utf8'))
+        .toMatchFileSnapshot(`./golden/${short}.vite.config.ts`)
+    })
+  }
 })

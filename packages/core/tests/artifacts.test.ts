@@ -19,9 +19,9 @@ async function has(bin: string): Promise<boolean> {
   }
 }
 
-async function buildStack(): Promise<string> {
+async function buildStack(fw: 'sveltekit' | 'tanstack-start'): Promise<string> {
   const reg = await loadRegistry(bricksDir)
-  const r = resolve({ bricks: { sveltekit: {}, caddy: {}, postgres: {} }, overrides: {} }, reg)
+  const r = resolve({ bricks: { vite: {}, [fw]: {}, caddy: {}, postgres: {}, drizzle: {} }, overrides: {} }, reg)
   if (!r.ok) throw new Error(JSON.stringify(r.errors))
   const dir = await mkdtemp(join(tmpdir(), 'stacky-artifact-'))
   await apply(await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} }), dir, r.graph)
@@ -29,16 +29,18 @@ async function buildStack(): Promise<string> {
 }
 
 describe('generated artifacts are valid', () => {
-  it('docker compose accepts the composed file', async ({ skip }) => {
-    if (!(await has('docker'))) skip()
-    const dir = await buildStack()
-    const { stdout } = await run('docker', ['compose', '-f', join(dir, 'ops/compose.yml'), 'config'])
-    expect(stdout).toContain('postgres')
-  })
+  for (const fw of ['sveltekit', 'tanstack-start'] as const) {
+    it(`[${fw}] docker compose accepts the composed file`, async ({ skip }) => {
+      if (!(await has('docker'))) skip()
+      const dir = await buildStack(fw)
+      const { stdout } = await run('docker', ['compose', '-f', join(dir, 'ops/compose.yml'), 'config'])
+      expect(stdout).toContain('postgres')
+    })
+  }
 
   it('caddy accepts the generated Caddyfile', async ({ skip }) => {
     if (!(await has('caddy'))) skip()
-    const dir = await buildStack()
+    const dir = await buildStack('sveltekit')
     await expect(
       run('caddy', ['validate', '--config', join(dir, 'ops/caddy/Caddyfile'), '--adapter', 'caddyfile']),
     ).resolves.toBeDefined()
