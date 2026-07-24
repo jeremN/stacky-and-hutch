@@ -1,0 +1,28 @@
+[brick]
+name    = "sveltekit"
+slot    = "web"
+summary = "SvelteKit app layered on the Vite base"
+
+[requires]
+build = "*"
+
+[provides]
+capabilities = ["http-origin"]
+
+[[files]]
+from = "files/hooks.server.ts"
+to   = "app/src/hooks.server.ts"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[injection_points]]
+name   = "server-init"
+target = "app/src/hooks.server.ts"
+marker = "stacky:server-init"
+
+[[inject]]
+point = "vite-plugins"
+from  = "fragments/plugin.ts"

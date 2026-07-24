@@ -4,6 +4,7 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
+    "build": "pnpm --filter @stacky/cli build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:artifacts": "vitest run packages/core/tests/artifacts.test.ts",

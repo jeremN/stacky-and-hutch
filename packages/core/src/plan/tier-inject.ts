@@ -31,33 +31,46 @@ export function stripMarker(host: string, marker: string): string {
   return applyMarker(host, marker, '')
 }
 
+function resolvePoint(graph: Graph, point: string): { target: string; marker: string } {
+  for (const { brick } of graph.bricks) {
+    const ip = brick.injectionPoints.find((p) => p.name === point)
+    if (ip) return { target: ip.target, marker: ip.marker }
+  }
+  // Unreachable when resolve() succeeded: consuming a point requires its publisher.
+  throw new Error(`no brick in the graph publishes injection point "${point}"`)
+}
+
 export async function planInjections(graph: Graph, ctx: PlanContext): Promise<FileOp[]> {
   const ops: FileOp[] = []
-  const wanted = new Set<string>()
+  // "target#marker" -> contributors, collected in graph order (stable).
+  const byMarker = new Map<string, { target: string; marker: string; parts: string[] }>()
 
   for (const { brick, params } of graph.bricks) {
     for (const spec of brick.inject) {
-      wanted.add(`${spec.target}#${spec.marker}`)
+      const { target, marker } = spec.point
+        ? resolvePoint(graph, spec.point)
+        : { target: spec.target!, marker: spec.marker! }
       const raw = await readFile(join(brick.dir, spec.from), 'utf8')
-      const contents = spec.from.endsWith('.eta') ? renderTemplate(raw, params) : raw
-      ops.push({ kind: 'inject', path: spec.target, marker: spec.marker, contents, owner: brick.name })
+      const text = spec.from.endsWith('.eta') ? renderTemplate(raw, params) : raw
+      const key = `${target}#${marker}`
+      const group = byMarker.get(key) ?? { target, marker, parts: [] }
+      group.parts.push(text.replace(/\n+$/, ''))
+      byMarker.set(key, group)
     }
   }
 
-  // A locked injection whose brick is gone gets its region emptied, not deleted —
-  // the host file belongs to the user.
-  //
-  // Note we test for host existence rather than calling fileState: an inject lock entry's
-  // hash is of the *injected body*, not of the host file, so fileState would always say
-  // "modified" here. Drift inside a marker region is out of scope — the host is the user's.
+  const wanted = new Set(byMarker.keys())
+  for (const { target, marker, parts } of byMarker.values()) {
+    ops.push({ kind: 'inject', path: target, marker, contents: parts.join('\n'), owner: '@composed' })
+  }
+
+  // A locked marker with no current contributor gets its region emptied (host stays).
   for (const entry of ctx.lock.files) {
     if (entry.tier !== 'inject') continue
     const [path, marker] = entry.path.split('#')
     if (!marker || wanted.has(entry.path)) continue
     const hostExists = await access(join(ctx.projectDir, path!)).then(() => true, () => false)
-    if (hostExists) {
-      ops.push({ kind: 'inject', path: path!, marker, contents: '', owner: entry.owner as string })
-    }
+    if (hostExists) ops.push({ kind: 'inject', path: path!, marker, contents: '', owner: '@composed' })
   }
 
   return ops

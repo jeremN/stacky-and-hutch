@@ -16,11 +16,17 @@ export function formatError(e: ResolutionError): string {
       return `Brick "${e.brick}" needs param "${e.param}" (${e.schema.type}). Set it with --set ${e.param}=<value>.`
     case 'invalid-param':
       return `Brick "${e.brick}" param "${e.param}": ${e.reason} (got ${JSON.stringify(e.value)}).`
+    case 'unsatisfiable-injection-point':
+      return `"${e.requiredBy}" wants injection point "${e.point}" but no brick publishes it.`
+    case 'ambiguous-injection-point':
+      return `"${e.requiredBy}" wants injection point "${e.point}" — multiple bricks publish it: ${e.candidates.join(', ')}. Pick one and add it to stack.toml.`
   }
 }
 
 /** Exit 2 means "I need input from you"; exit 1 means "this is broken". */
 export function exitCodeFor(errors: ResolutionError[]): 1 | 2 {
-  const needsInput = errors.every((e) => e.kind === 'ambiguous' || e.kind === 'missing-param')
+  const needsInput = errors.every(
+    (e) => e.kind === 'ambiguous' || e.kind === 'missing-param' || e.kind === 'ambiguous-injection-point',
+  )
   return errors.length > 0 && needsInput ? 2 : 1
 }

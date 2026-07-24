@@ -1,0 +1,27 @@
+[brick]
+name    = "drizzle"
+slot    = "db"
+summary = "Drizzle ORM — schema, config, and a typed client"
+
+[requires]
+sql-db = "*"
+
+[provides]
+capabilities = ["orm"]
+
+[[files]]
+from = "files/schema.ts"
+to   = "db/schema.ts"
+
+[[files]]
+from = "files/drizzle.config.ts"
+to   = "app/drizzle.config.ts"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[inject]]
+point = "server-init"
+from  = "fragments/server-init.ts"

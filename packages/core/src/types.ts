@@ -9,8 +9,9 @@ export interface BrickParam {
 }
 
 export interface FileSpec { from: string; to: string }
-export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' }
-export interface InjectSpec { target: string; marker: string; from: string }
+export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' | 'json' }
+export interface InjectSpec { point?: string; target?: string; marker?: string; from: string }
+export interface InjectionPoint { name: string; target: string; marker: string }
 
 export interface Brick {
   name: BrickId
@@ -23,6 +24,7 @@ export interface Brick {
   files: FileSpec[]
   fragments: FragmentSpec[]
   inject: InjectSpec[]
+  injectionPoints: InjectionPoint[]
 }
 
 export interface SlotDef { name: string; single: boolean }
@@ -58,6 +60,8 @@ export type ResolutionError =
   | { kind: 'unknown-brick'; name: string; suggestions: BrickId[] }
   | { kind: 'missing-param'; brick: BrickId; param: string; schema: BrickParam }
   | { kind: 'invalid-param'; brick: BrickId; param: string; value: unknown; reason: string }
+  | { kind: 'unsatisfiable-injection-point'; point: string; requiredBy: BrickId }
+  | { kind: 'ambiguous-injection-point'; point: string; candidates: BrickId[]; requiredBy: BrickId }
 
 export type ResolveResult =
   | { ok: true; graph: Graph }

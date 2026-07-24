@@ -1,0 +1,8 @@
+[brick]
+name    = "consumer2"
+slot    = "db"
+summary = "Injects into the seam by name, alongside consumer"
+
+[[inject]]
+point = "seam"
+from  = "fragments/seam.ts"

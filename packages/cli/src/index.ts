@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { cac } from 'cac'
 import { fileURLToPath } from 'node:url'
 import { add } from './commands/add.js'

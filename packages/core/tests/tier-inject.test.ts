@@ -1,5 +1,12 @@
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { applyMarker, stripMarker } from '../src/plan/tier-inject.js'
+import { emptyLock } from '../src/lockfile.js'
+import { applyMarker, planInjections, stripMarker } from '../src/plan/tier-inject.js'
+import { loadRegistry } from '../src/registry.js'
+import { resolve } from '../src/resolve.js'
 
 const HOST = ['import x from "x"', '', '// >>> stacky:auth', '// <<< stacky:auth', '', 'export const y = 1'].join('\n')
 
@@ -53,5 +60,34 @@ describe('stripMarker', () => {
     expect(stripped).not.toContain('const a = 1')
     expect(stripped).toContain('// >>> stacky:auth')
     expect(stripped).toContain('// <<< stacky:auth')
+  })
+})
+
+const injFixture = fileURLToPath(new URL('./fixtures/inject-points', import.meta.url))
+
+describe('planInjections — point resolution', () => {
+  it('resolves a point-based inject to the selected publisher target and marker', async () => {
+    const reg = await loadRegistry(injFixture)
+    const r = resolve({ bricks: { consumer: {}, 'host-a': {} }, overrides: {} }, reg)
+    if (!r.ok) throw new Error(JSON.stringify(r.errors))
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-inj-'))
+    const ops = await planInjections(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} })
+    const inj = ops.find((o) => o.kind === 'inject')!
+    expect(inj).toMatchObject({ kind: 'inject', path: 'app/host-a.ts', marker: 'stacky:seam' })
+    expect((inj as { contents: string }).contents).toContain('export const injected = true')
+  })
+
+  it('aggregates two contributors to the same marker into a single joined op', async () => {
+    const reg = await loadRegistry(injFixture)
+    const r = resolve({ bricks: { 'host-a': {}, consumer: {}, consumer2: {} }, overrides: {} }, reg)
+    if (!r.ok) throw new Error(JSON.stringify(r.errors))
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-inj-'))
+    const ops = await planInjections(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} })
+    const hostAOps = ops.filter((o) => o.kind === 'inject' && o.path === 'app/host-a.ts')
+    expect(hostAOps).toHaveLength(1)
+    const inj = hostAOps[0] as { contents: string }
+    expect(inj.contents).toContain('export const injected = true')
+    expect(inj.contents).toContain('export const injected2 = true')
+    expect(inj.contents).toBe('export const injected = true\nexport const injected2 = true')
   })
 })

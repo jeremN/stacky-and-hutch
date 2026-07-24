@@ -1,0 +1,13 @@
+[brick]
+name    = "host-b"
+slot    = "web"
+summary = "Publishes the seam at host-b.ts"
+
+[[files]]
+from = "files/host.ts"
+to   = "app/host-b.ts"
+
+[[injection_points]]
+name   = "seam"
+target = "app/host-b.ts"
+marker = "stacky:seam"
