@@ -28,37 +28,49 @@ export async function loadRegistry(dir: string): Promise<Registry> {
   const slots: SlotDef[] = (slotsRaw.slot ?? []).map((s) => ({ name: s.name, single: s.single ?? true }))
   const slotNames = new Set(slots.map((s) => s.name))
 
-  const entries = await readdir(dir, { withFileTypes: true })
   const bricks = new Map<string, Brick>()
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const brickDir = join(dir, entry.name)
-    const raw = parseToml(await readFile(join(brickDir, 'brick.toml'), 'utf8')) as RawBrickFile
+  for (const concern of await readdir(dir, { withFileTypes: true })) {
+    if (!concern.isDirectory()) continue
+    const concernDir = join(dir, concern.name)
 
-    const name = raw.brick?.name
-    const slot = raw.brick?.slot
-    if (!name) throw new Error(`${entry.name}/brick.toml: missing [brick].name`)
-    if (!slot) throw new Error(`${entry.name}/brick.toml: missing [brick].slot`)
-    if (name !== entry.name) {
-      throw new Error(`brick "${name}" must live in a folder of the same name (found "${entry.name}")`)
-    }
-    if (!slotNames.has(slot)) {
-      throw new Error(`brick "${name}": unknown slot "${slot}" — declare it in slots.toml`)
-    }
+    for (const entry of await readdir(concernDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const brickDir = join(concernDir, entry.name)
 
-    bricks.set(name, {
-      name,
-      slot,
-      summary: raw.brick?.summary ?? '',
-      dir: brickDir,
-      requires: raw.requires ?? {},
-      provides: raw.provides?.capabilities ?? [],
-      params: raw.params ?? {},
-      files: raw.files ?? [],
-      fragments: (raw.fragments ?? []).map((f) => parseFragment(f, name)),
-      inject: raw.inject ?? [],
-    })
+      let text: string
+      try {
+        text = await readFile(join(brickDir, 'brick.toml'), 'utf8')
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue
+        throw err
+      }
+      const raw = parseToml(text) as RawBrickFile
+
+      const name = raw.brick?.name
+      const slot = raw.brick?.slot
+      if (!name) throw new Error(`${concern.name}/${entry.name}/brick.toml: missing [brick].name`)
+      if (!slot) throw new Error(`${concern.name}/${entry.name}/brick.toml: missing [brick].slot`)
+      if (name !== entry.name) {
+        throw new Error(`brick "${name}" must live in a folder of the same name (found "${entry.name}")`)
+      }
+      if (!slotNames.has(slot)) {
+        throw new Error(`brick "${name}": unknown slot "${slot}" — declare it in slots.toml`)
+      }
+
+      bricks.set(name, {
+        name,
+        slot,
+        summary: raw.brick?.summary ?? '',
+        dir: brickDir,
+        requires: raw.requires ?? {},
+        provides: raw.provides?.capabilities ?? [],
+        params: raw.params ?? {},
+        files: raw.files ?? [],
+        fragments: (raw.fragments ?? []).map((f) => parseFragment(f, name)),
+        inject: raw.inject ?? [],
+      })
+    }
   }
 
   return { bricks, slots }
