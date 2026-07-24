@@ -1,0 +1,7 @@
+[brick]
+name    = "bad"
+slot    = "db"
+summary = "Malformed inject"
+
+[[inject]]
+from = "fragments/x.ts"

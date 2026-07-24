@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse as parseToml } from 'smol-toml'
-import type { Brick, BrickParam, FragmentSpec, Registry, SlotDef } from './types.js'
+import type { Brick, BrickParam, FragmentSpec, InjectSpec, InjectionPoint, Registry, SlotDef } from './types.js'
 
 interface RawBrickFile {
   brick?: { name?: string; slot?: string; summary?: string }
@@ -10,7 +10,8 @@ interface RawBrickFile {
   params?: Record<string, BrickParam>
   files?: { from: string; to: string }[]
   fragments?: { target: string; from: string; strategy?: string }[]
-  inject?: { target: string; marker: string; from: string }[]
+  inject?: { point?: string; target?: string; marker?: string; from: string }[]
+  injection_points?: { name: string; target: string; marker: string }[]
 }
 
 function parseFragment(raw: { target: string; from: string; strategy?: string }, brick: string): FragmentSpec {
@@ -19,6 +20,15 @@ function parseFragment(raw: { target: string; from: string; strategy?: string },
     throw new Error(`brick "${brick}": unknown fragment strategy "${strategy}" (expected "yaml", "lines", or "json")`)
   }
   return { target: raw.target, from: raw.from, strategy }
+}
+
+function parseInject(raw: { point?: string; target?: string; marker?: string; from: string }, brick: string): InjectSpec {
+  const hasPoint = raw.point != null
+  const hasExplicit = raw.target != null && raw.marker != null
+  if (hasPoint === hasExplicit) {
+    throw new Error(`brick "${brick}": each [[inject]] needs exactly one of "point" or ("target" and "marker")`)
+  }
+  return hasPoint ? { point: raw.point, from: raw.from } : { target: raw.target, marker: raw.marker, from: raw.from }
 }
 
 export async function loadRegistry(dir: string): Promise<Registry> {
@@ -58,17 +68,23 @@ export async function loadRegistry(dir: string): Promise<Registry> {
         throw new Error(`brick "${name}": unknown slot "${slot}" — declare it in slots.toml`)
       }
 
+      const injectionPoints: InjectionPoint[] = (raw.injection_points ?? []).map((p) => ({
+        name: p.name, target: p.target, marker: p.marker,
+      }))
+      const inject = (raw.inject ?? []).map((i) => parseInject(i, name))
+      const provides = [
+        ...(raw.provides?.capabilities ?? []),
+        ...injectionPoints.map((p) => `inject:${p.name}`),
+      ]
+      const requires: Record<string, string> = { ...(raw.requires ?? {}) }
+      for (const i of inject) if (i.point) requires[`inject:${i.point}`] = '*'
+
       bricks.set(name, {
-        name,
-        slot,
-        summary: raw.brick?.summary ?? '',
-        dir: brickDir,
-        requires: raw.requires ?? {},
-        provides: raw.provides?.capabilities ?? [],
-        params: raw.params ?? {},
+        name, slot, summary: raw.brick?.summary ?? '', dir: brickDir,
+        requires, provides, params: raw.params ?? {},
         files: raw.files ?? [],
         fragments: (raw.fragments ?? []).map((f) => parseFragment(f, name)),
-        inject: raw.inject ?? [],
+        inject, injectionPoints,
       })
     }
   }

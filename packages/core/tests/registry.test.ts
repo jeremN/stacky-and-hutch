@@ -30,3 +30,26 @@ describe('loadRegistry', () => {
     await expect(loadRegistry(bad)).rejects.toThrow(/unknown slot "cache"/)
   })
 })
+
+describe('loadRegistry — injection points', () => {
+  const injFixture = fileURLToPath(new URL('./fixtures/inject-points', import.meta.url))
+
+  it('parses [[injection_points]] and adds a synthetic inject:<name> capability', async () => {
+    const reg = await loadRegistry(injFixture)
+    const hostA = reg.bricks.get('host-a')!
+    expect(hostA.injectionPoints).toEqual([{ name: 'seam', target: 'app/host-a.ts', marker: 'stacky:seam' }])
+    expect(hostA.provides).toContain('inject:seam')
+  })
+
+  it('turns a point-based [[inject]] into an inject:<point> requirement', async () => {
+    const reg = await loadRegistry(injFixture)
+    const consumer = reg.bricks.get('consumer')!
+    expect(consumer.inject).toEqual([{ point: 'seam', from: 'fragments/seam.ts' }])
+    expect(consumer.requires['inject:seam']).toBe('*')
+  })
+
+  it('rejects an [[inject]] with neither point nor target+marker', async () => {
+    const bad = fileURLToPath(new URL('./fixtures/inject-bad', import.meta.url))
+    await expect(loadRegistry(bad)).rejects.toThrow(/exactly one of "point"/)
+  })
+})

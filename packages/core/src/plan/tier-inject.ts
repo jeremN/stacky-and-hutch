@@ -37,6 +37,15 @@ export async function planInjections(graph: Graph, ctx: PlanContext): Promise<Fi
 
   for (const { brick, params } of graph.bricks) {
     for (const spec of brick.inject) {
+      if (spec.target == null || spec.marker == null) {
+        // Point-based injects (`{ point, from }`) are resolved to a concrete
+        // { target, marker } via the capability graph — that resolution lands in
+        // a later phase. No resolve()-produced graph can reach here with a bare
+        // point yet, so this is a hard stop rather than a silent skip.
+        throw new Error(
+          `brick "${brick.name}": point-based inject "${spec.point}" has no resolved target/marker`,
+        )
+      }
       wanted.add(`${spec.target}#${spec.marker}`)
       const raw = await readFile(join(brick.dir, spec.from), 'utf8')
       const contents = spec.from.endsWith('.eta') ? renderTemplate(raw, params) : raw

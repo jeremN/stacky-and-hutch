@@ -1,0 +1,7 @@
+[[slot]]
+name = "web"
+single = true
+
+[[slot]]
+name = "db"
+single = false

@@ -1,0 +1,8 @@
+[brick]
+name    = "orphan"
+slot    = "db"
+summary = "Injects into a seam nobody publishes"
+
+[[inject]]
+point = "nonexistent"
+from  = "fragments/seam.ts"

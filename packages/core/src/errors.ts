@@ -16,6 +16,10 @@ export function formatError(e: ResolutionError): string {
       return `Brick "${e.brick}" needs param "${e.param}" (${e.schema.type}). Set it with --set ${e.param}=<value>.`
     case 'invalid-param':
       return `Brick "${e.brick}" param "${e.param}": ${e.reason} (got ${JSON.stringify(e.value)}).`
+    case 'unsatisfiable-injection-point':
+      return `"${e.requiredBy}" wants injection point "${e.point}" but no brick publishes it.`
+    case 'ambiguous-injection-point':
+      return `"${e.requiredBy}" wants injection point "${e.point}" — multiple bricks publish it: ${e.candidates.join(', ')}. Pick one and add it to stack.toml.`
   }
 }
 

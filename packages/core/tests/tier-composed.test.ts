@@ -68,6 +68,7 @@ describe('planComposedFiles', () => {
         files: [],
         fragments: [{ target: 'ops/mixed.yml', from, strategy }],
         inject: [],
+        injectionPoints: [],
       },
       params: {},
       inferred: false,
@@ -94,6 +95,7 @@ describe('planComposedFiles — json strategy', () => {
       brick: {
         name, slot: name, summary: '', dir: bricksDir, requires: {}, provides: [],
         params: {}, files: [], fragments: [{ target: 'app/package.json', from, strategy: 'json' }], inject: [],
+        injectionPoints: [],
       },
       params: {}, inferred: false,
     })
