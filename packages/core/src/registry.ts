@@ -15,8 +15,8 @@ interface RawBrickFile {
 
 function parseFragment(raw: { target: string; from: string; strategy?: string }, brick: string): FragmentSpec {
   const strategy = raw.strategy ?? 'yaml'
-  if (strategy !== 'yaml' && strategy !== 'lines') {
-    throw new Error(`brick "${brick}": unknown fragment strategy "${strategy}" (expected "yaml" or "lines")`)
+  if (strategy !== 'yaml' && strategy !== 'lines' && strategy !== 'json') {
+    throw new Error(`brick "${brick}": unknown fragment strategy "${strategy}" (expected "yaml", "lines", or "json")`)
   }
   return { target: raw.target, from: raw.from, strategy }
 }

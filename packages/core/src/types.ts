@@ -9,7 +9,7 @@ export interface BrickParam {
 }
 
 export interface FileSpec { from: string; to: string }
-export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' }
+export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' | 'json' }
 export interface InjectSpec { target: string; marker: string; from: string }
 
 export interface Brick {

@@ -1,12 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import { BANNER_YAML, deepMerge, mergeLines, mergeYaml } from '../merge.js'
+import { BANNER_YAML, deepMerge, mergeJson, mergeLines, mergeYaml, stringifyJson } from '../merge.js'
 import { renderTemplate } from '../template.js'
 import type { FileOp, Graph } from '../types.js'
 import type { PlanContext } from './tier-brick.js'
 
-interface Contribution { brick: string; text: string; strategy: 'yaml' | 'lines' }
+interface Contribution { brick: string; text: string; strategy: 'yaml' | 'lines' | 'json' }
 
 export async function planComposedFiles(graph: Graph, ctx: PlanContext): Promise<FileOp[]> {
   // target path -> contributions, already in graph order (stable)
@@ -35,15 +35,20 @@ export async function planComposedFiles(graph: Graph, ctx: PlanContext): Promise
     let contents =
       strategy === 'yaml'
         ? mergeYaml(contributions.map((c) => c.text))
-        : mergeLines(contributions.map((c) => ({ brick: c.brick, text: c.text })))
+        : strategy === 'lines'
+          ? mergeLines(contributions.map((c) => ({ brick: c.brick, text: c.text })))
+          : mergeJson(contributions.map((c) => c.text))
 
     const override = ctx.overrides[target]
     if (override) {
-      if (strategy !== 'yaml') {
-        throw new Error(`overrides for "${target}" require a yaml fragment strategy`)
+      if (strategy === 'yaml') {
+        const merged = deepMerge(parseYaml(contents) as Record<string, unknown>, override)
+        contents = BANNER_YAML + stringifyYaml(merged, { sortMapEntries: true })
+      } else if (strategy === 'json') {
+        contents = stringifyJson(deepMerge(JSON.parse(contents) as Record<string, unknown>, override))
+      } else {
+        throw new Error(`overrides for "${target}" require a yaml or json fragment strategy`)
       }
-      const merged = deepMerge(parseYaml(contents) as Record<string, unknown>, override)
-      contents = BANNER_YAML + stringifyYaml(merged, { sortMapEntries: true })
     }
 
     ops.push({ kind: 'compose', path: target, contents, contributors: contributions.map((c) => c.brick) })
