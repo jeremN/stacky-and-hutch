@@ -173,8 +173,8 @@ seam; every contributor pushes onto it:
 
 ```ts
 // app/vite.config.ts (build/vite brick, after fix)
-import { defineConfig } from 'vite'
-const stackyPlugins = []
+import { defineConfig, type PluginOption } from 'vite'
+const stackyPlugins: PluginOption[] = []
 // >>> stacky:vite-plugins
 // <<< stacky:vite-plugins
 export default defineConfig({ plugins: stackyPlugins })
@@ -190,8 +190,12 @@ stackyPlugins.push(sveltekit())
 ```
 
 Tailwind's fragment is the parallel `import tailwindcss from '@tailwindcss/vite'; stackyPlugins.push(tailwindcss())`.
-Aggregated, they coexist cleanly. A zero-contributor region is now valid too
-(`stackyPlugins` stays `[]`), which the old design would have broken.
+Aggregated, they coexist cleanly. The array is typed `PluginOption[]` (not bare
+`[]`) so a zero-contributor region — a `{compose, vite}` stack with no framework,
+or the region emptied after the web brick is removed — still typechecks in the
+generated app's strict mode; a bare `const stackyPlugins = []` with no writes
+raises TS7034/TS7005 there. The old single-contributor design broke on two
+contributors; this typed form is robust across zero, one, and many.
 
 **Why this design over a two-seam array literal** (decision, recorded for the
 plan): the `vite-plugins` seam is the second of many "collect contributions into
