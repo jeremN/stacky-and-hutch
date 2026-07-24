@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 
+const stackyPlugins: PluginOption[] = []
 // >>> stacky:vite-plugins
-const stackyPlugins = []
 // <<< stacky:vite-plugins
 
 export default defineConfig({

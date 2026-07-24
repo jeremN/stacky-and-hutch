@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 
+const stackyPlugins: PluginOption[] = []
 // >>> stacky:vite-plugins
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-const stackyPlugins = [tanstackStart()]
+stackyPlugins.push(tanstackStart())
 // <<< stacky:vite-plugins
 
 export default defineConfig({
