@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { execFile } from 'node:child_process'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -19,9 +19,9 @@ async function has(bin: string): Promise<boolean> {
   }
 }
 
-async function buildStack(fw: 'sveltekit' | 'tanstack-start'): Promise<string> {
+async function buildStack(fw: 'sveltekit' | 'tanstack-start', engine: 'postgres' | 'sqlite' = 'postgres'): Promise<string> {
   const reg = await loadRegistry(bricksDir)
-  const r = resolve({ bricks: { vite: {}, [fw]: {}, caddy: {}, postgres: {}, drizzle: {} }, overrides: {} }, reg)
+  const r = resolve({ bricks: { vite: {}, [fw]: {}, caddy: {}, [engine]: {}, drizzle: {} }, overrides: {} }, reg)
   if (!r.ok) throw new Error(JSON.stringify(r.errors))
   const dir = await mkdtemp(join(tmpdir(), 'stacky-artifact-'))
   await apply(await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} }), dir, r.graph)
@@ -37,6 +37,14 @@ describe('generated artifacts are valid', () => {
       expect(stdout).toContain('postgres')
     })
   }
+
+  it('[sqlite] compose has no database service and still validates', async ({ skip }) => {
+    if (!(await has('docker'))) skip()
+    const dir = await buildStack('sveltekit', 'sqlite')
+    expect(await readFile(join(dir, 'ops/compose.yml'), 'utf8')).not.toContain('postgres')
+    const { stdout } = await run('docker', ['compose', '-f', join(dir, 'ops/compose.yml'), 'config'])
+    expect(stdout).toContain('web')
+  })
 
   it('caddy accepts the generated Caddyfile', async ({ skip }) => {
     if (!(await has('caddy'))) skip()

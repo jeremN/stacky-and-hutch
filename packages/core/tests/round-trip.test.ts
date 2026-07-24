@@ -56,6 +56,37 @@ describe('round trip — both framework stacks', () => {
     })
   }
 
+  for (const fw of FRAMEWORKS) {
+    it(`[${fw}] swapping the db engine round-trips byte for byte`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-swap-${fw}-`))
+      const pgStack: Manifest = { bricks: { vite: {}, [fw]: {}, postgres: {}, drizzle: {} }, overrides: {} }
+      const sqliteStack: Manifest = { bricks: { vite: {}, [fw]: {}, sqlite: {}, drizzle: {} }, overrides: {} }
+
+      await converge(dir, structuredClone(pgStack))
+      const pgSnap = await snapshotTree(dir)
+
+      await converge(dir, structuredClone(sqliteStack))
+      const initFile = fw === 'sveltekit' ? 'app/src/hooks.server.ts' : 'app/src/server.ts'
+      const init = await readFile(join(dir, initFile), 'utf8')
+      expect(init).toContain('drizzle-orm/better-sqlite3')
+      expect(init).not.toContain('node-postgres')
+      expect(await readFile(join(dir, 'app/drizzle.config.ts'), 'utf8')).toContain("dialect: 'sqlite'")
+      expect(await readFile(join(dir, 'ops/compose.yml'), 'utf8')).not.toContain('postgres')
+
+      await converge(dir, structuredClone(pgStack))
+      expect(await snapshotTree(dir)).toEqual(pgSnap)
+    })
+  }
+
+  it('adding drizzle with two engines and none chosen is ambiguous', async () => {
+    const registry = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { vite: {}, sveltekit: {}, drizzle: {} }, overrides: {} }, registry)
+    expect(r.ok).toBe(false)
+    if (r.ok) throw new Error('expected an ambiguous resolution')
+    const ambiguous = r.errors.find((e) => e.kind === 'ambiguous')
+    expect(ambiguous).toMatchObject({ kind: 'ambiguous', capability: 'sql-db', candidates: ['postgres', 'sqlite'] })
+  })
+
   it('[sveltekit] removing drizzle leaves postgres server-init intact', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-rt-multi-'))
     const withPg: Manifest = { bricks: { vite: {}, sveltekit: {}, postgres: {} }, overrides: {} }
@@ -108,4 +139,15 @@ describe('golden files — per framework', () => {
         .toMatchFileSnapshot(`./golden/${short}.vite.config.ts`)
     })
   }
+
+  it('[sveltekit] sqlite stack matches the committed goldens', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-sqlite-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, sqlite: {}, drizzle: {} }, overrides: {} })
+    await expect(await readFile(join(dir, 'app/drizzle.config.ts'), 'utf8'))
+      .toMatchFileSnapshot('./golden/sqlite.drizzle.config.ts')
+    await expect(await readFile(join(dir, 'app/src/hooks.server.ts'), 'utf8'))
+      .toMatchFileSnapshot('./golden/sqlite.hooks.server.ts')
+    await expect(await readFile(join(dir, 'db/schema.ts'), 'utf8'))
+      .toMatchFileSnapshot('./golden/sqlite.schema.ts')
+  })
 })
