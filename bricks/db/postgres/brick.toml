@@ -1,13 +1,13 @@
 [brick]
 name    = "postgres"
-slot    = "db"
+slot    = "db-engine"
 summary = "Postgres service, connection pool, and a migrations folder"
 
 [requires]
 container-runtime = "*"
 
 [provides]
-capabilities = ["sql-db"]
+capabilities = ["sql-db", "pg-driver"]
 
 [params]
 version = { type = "string", default = "16" }

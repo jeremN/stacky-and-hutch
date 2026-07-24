@@ -1,6 +1,6 @@
 [brick]
 name    = "drizzle"
-slot    = "db"
+slot    = "orm"
 summary = "Drizzle ORM — schema, config, and a typed client"
 
 [requires]
