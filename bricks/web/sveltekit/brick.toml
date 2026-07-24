@@ -7,11 +7,19 @@ summary = "SvelteKit app layered on the Vite base"
 build = "*"
 
 [provides]
-capabilities = ["http-origin"]
+capabilities = ["http-origin", "svelte"]
 
 [[files]]
 from = "files/hooks.server.ts"
 to   = "app/src/hooks.server.ts"
+
+[[files]]
+from = "files/+layout.svelte"
+to   = "app/src/routes/+layout.svelte"
+
+[[files]]
+from = "files/+page.svelte"
+to   = "app/src/routes/+page.svelte"
 
 [[fragments]]
 target   = "app/package.json"
@@ -22,6 +30,16 @@ strategy = "json"
 name   = "server-init"
 target = "app/src/hooks.server.ts"
 marker = "stacky:server-init"
+
+[[injection_points]]
+name   = "app-head"
+target = "app/src/routes/+layout.svelte"
+marker = "stacky:app-head"
+
+[[injection_points]]
+name   = "app-shell"
+target = "app/src/routes/+layout.svelte"
+marker = "stacky:app-shell"
 
 [[inject]]
 point = "vite-plugins"

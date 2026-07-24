@@ -140,6 +140,16 @@ describe('golden files — per framework', () => {
     })
   }
 
+  it('[sveltekit] app shell publishes the styling seams', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-shell-sv-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
+    const layout = await readFile(join(dir, 'app/src/routes/+layout.svelte'), 'utf8')
+    expect(layout).toContain('>>> stacky:app-head')
+    expect(layout).toContain('>>> stacky:app-shell')
+    expect(layout).toContain('{@render children()}')
+    await expect(layout).toMatchFileSnapshot('./golden/sveltekit.layout.svelte')
+  })
+
   it('[sveltekit] sqlite stack matches the committed goldens', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-sqlite-'))
     await converge(dir, { bricks: { vite: {}, sveltekit: {}, sqlite: {}, drizzle: {} }, overrides: {} })
