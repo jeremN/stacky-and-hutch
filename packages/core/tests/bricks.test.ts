@@ -10,7 +10,8 @@ const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
 describe('real registry', () => {
   it('loads all bricks', async () => {
     const reg = await loadRegistry(bricksDir)
-    expect([...reg.bricks.keys()].sort()).toEqual(['caddy', 'compose', 'postgres', 'sveltekit', 'tanstack-start', 'vite'])
+    expect([...reg.bricks.keys()].sort())
+      .toEqual(['caddy', 'compose', 'drizzle', 'postgres', 'sveltekit', 'tanstack-start', 'vite'])
   })
 
   it('resolves the full stack, inferring vite and compose', async () => {
@@ -58,5 +59,27 @@ describe('tanstack-start stack', () => {
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
     expect(pkg.dependencies).toHaveProperty('@tanstack/react-start')
     expect(pkg.dependencies).toHaveProperty('pg')
+  })
+})
+
+describe('drizzle + postgres multi-contributor server-init', () => {
+  it('lands both the pool and the drizzle client in one marker region', async () => {
+    const reg = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { sveltekit: {}, postgres: {}, drizzle: {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-drizzle-'))
+    await apply(await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} }), dir, r.graph)
+
+    const hooks = await readFile(join(dir, 'app/src/hooks.server.ts'), 'utf8')
+    expect(hooks).toContain('new Pool')
+    expect(hooks).toContain('drizzle(process.env.DATABASE_URL')
+    // both bodies live inside the single server-init region
+    const region = hooks.split('>>> stacky:server-init')[1].split('<<< stacky:server-init')[0]
+    expect(region).toContain('new Pool')
+    expect(region).toContain('drizzle(')
+
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
+    expect(pkg.scripts).toHaveProperty('db:migrate')
   })
 })
