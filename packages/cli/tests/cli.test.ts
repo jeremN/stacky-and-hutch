@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { execFile } from 'node:child_process'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -36,6 +36,24 @@ describe('cli', () => {
     expect(code).toBe(2)
   })
 
+  it('add postgres alone against the real registry is ambiguous (two server-init publishers)', async () => {
+    const dir = await project()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      expect(await runCli(argv(dir, 'add', 'postgres'))).toBe(2)
+      const payload = JSON.parse(errorSpy.mock.calls.at(-1)?.[0] as string)
+      expect(payload.errors).toContainEqual(
+        expect.objectContaining({
+          kind: 'ambiguous-injection-point',
+          point: 'server-init',
+          candidates: ['sveltekit', 'tanstack-start'],
+        }),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
   it('exits 1 for an unknown brick and does not write stack.toml', async () => {
     const dir = await project()
     expect(await runCli(argv(dir, 'add', 'nope'))).toBe(1)
@@ -44,9 +62,12 @@ describe('cli', () => {
 
   it('remove reverses add', async () => {
     const dir = await project()
-    await runCli(argv(dir, 'add', 'postgres'))
+    expect(await runCli(argv(dir, 'add', 'sveltekit'))).toBe(0)
+    expect(await runCli(argv(dir, 'add', 'postgres'))).toBe(0)
+    expect(await readFile(join(dir, 'stack.toml'), 'utf8')).toContain('postgres')
     expect(await runCli(argv(dir, 'remove', 'postgres'))).toBe(0)
     expect(await readFile(join(dir, 'stack.toml'), 'utf8')).not.toContain('postgres')
+    expect(await readFile(join(dir, 'stack.toml'), 'utf8')).toContain('sveltekit')
   })
 
   it('plan writes nothing to disk', async () => {
