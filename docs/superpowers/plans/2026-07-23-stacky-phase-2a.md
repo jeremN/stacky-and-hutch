@@ -314,9 +314,9 @@ describe('planComposedFiles — json strategy', () => {
 
     const mk = (name: string, from: string): ResolvedBrick => ({
       brick: {
-        name, slot: name, summary: '', dir: bricksDir, requires: {}, provides: {} as never,
+        name, slot: name, summary: '', dir: bricksDir, requires: {}, provides: [],
         params: {}, files: [], fragments: [{ target: 'app/package.json', from, strategy: 'json' }], inject: [],
-      } as never,
+      },
       params: {}, inferred: false,
     })
     const g: Graph = { bricks: [mk('a', 'a.json'), mk('b', 'b.json')] }
@@ -333,7 +333,7 @@ describe('planComposedFiles — json strategy', () => {
 })
 ```
 
-> Note: the `provides` field on the fixture brick is set via `as never` because this inline literal predates the injection-point additions; keep it as shown to avoid coupling this task to Task 3's type change.
+> Note: `mk` builds a properly-typed `Brick` literal for the Task-2 type state (no `injectionPoints` field yet). Task 3 adds that field and updates this literal.
 
 - [ ] **Step 7: Run json compose test, verify pass; then full suite + typecheck; commit**
 
@@ -624,7 +624,7 @@ In the `bricks.set(...)` call, compute injection points and synthetic capabiliti
 - [ ] **Step 6: Run registry tests, then full suite + typecheck**
 
 Run: `pnpm vitest run packages/core/tests/registry.test.ts && pnpm vitest run && pnpm tsc -b`
-Expected: registry PASS; full suite PASS. Note: the inline `mkBrick` in `tier-composed.test.ts` now needs `injectionPoints: []` — add it to that literal (in the `brick: { … }` object) if tsc flags it.
+Expected: registry PASS; full suite PASS. Note: adding the required `injectionPoints` field to `Brick` breaks the two inline `Brick` literals in `tier-composed.test.ts` — the phase-1 `mkBrick` and the `mk` helper added in Task 2. Add `injectionPoints: []` to the `brick: { … }` object in both; tsc flags them until fixed.
 
 - [ ] **Step 7: Commit**
 
