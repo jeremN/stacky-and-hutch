@@ -11,6 +11,11 @@ single = true
 name = "web"
 single = true
 
+# CSS framework (Tailwind, etc.) — one per project.
+[[slot]]
+name = "css"
+single = true
+
 [[slot]]
 name = "edge"
 single = true

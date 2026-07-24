@@ -1,0 +1,21 @@
+[brick]
+name    = "tailwind"
+slot    = "css"
+summary = "Tailwind CSS v4 via the Vite plugin"
+
+[[files]]
+from = "files/app.css"
+to   = "app/src/app.css"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[inject]]
+point = "vite-plugins"
+from  = "fragments/plugin.ts"
+
+[[inject]]
+point = "app-head"
+from  = "fragments/head.ts"

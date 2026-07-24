@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'postgres', 'sqlite'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'postgres', 'sqlite', 'tailwind'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -122,6 +122,25 @@ describe('round trip — both framework stacks', () => {
     expect(paths.filter((p) => p.startsWith('db/'))).toEqual([])
     const manifest = await readManifest(dir)
     expect(manifest.bricks).not.toHaveProperty('postgres')
+  })
+
+  it('tailwind wires the vite plugin, css import, and app.css (both stacks, byte-identical css)', async () => {
+    async function bits(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-tw-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, tailwind: {} }, overrides: {} })
+      const css = await readFile(join(dir, 'app/src/app.css'), 'utf8')
+      const viteCfg = await readFile(join(dir, 'app/vite.config.ts'), 'utf8')
+      const layoutPath = fw === 'sveltekit' ? 'app/src/routes/+layout.svelte' : 'app/src/routes/__root.tsx'
+      const layout = await readFile(join(dir, layoutPath), 'utf8')
+      return { css, viteCfg, importsCss: layout.includes("import '../app.css'") }
+    }
+    const sv = await bits('sveltekit')
+    const rx = await bits('tanstack-start')
+    expect(sv.css).toContain('@import "tailwindcss"')
+    expect(sv.viteCfg).toContain('stackyPlugins.push(tailwindcss())')
+    expect(rx.viteCfg).toContain('stackyPlugins.push(tailwindcss())')
+    expect(sv.importsCss && rx.importsCss).toBe(true)
+    expect(sv.css).toEqual(rx.css) // Tailwind contributes byte-identical css on both stacks
   })
 })
 
