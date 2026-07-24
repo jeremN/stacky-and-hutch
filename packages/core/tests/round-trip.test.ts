@@ -34,18 +34,23 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'postgres'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'postgres', 'sqlite'])
 
       for (const brick of removable) {
+        // A brick that needs a database engine can't be added alone (two engines => ambiguous),
+        // so give it a fixed engine in its foundation.
+        const needsEngine = registry.bricks.get(brick)!.requires['sql-db'] != null
+        const brickBase = needsEngine ? { ...base.bricks, postgres: {} } : { ...base.bricks }
+
         const dir = await mkdtemp(join(tmpdir(), `stacky-rt-${fw}-${brick}-`))
-        await converge(dir, structuredClone(base))
+        await converge(dir, { bricks: structuredClone(brickBase), overrides: {} })
         const before = await snapshotTree(dir)
 
-        await converge(dir, { bricks: { ...base.bricks, [brick]: {} }, overrides: {} })
+        await converge(dir, { bricks: { ...brickBase, [brick]: {} }, overrides: {} })
         const during = await snapshotTree(dir)
         expect(Object.keys(during).length).toBeGreaterThan(Object.keys(before).length)
 
-        await converge(dir, structuredClone(base))
+        await converge(dir, { bricks: structuredClone(brickBase), overrides: {} })
         expect(await snapshotTree(dir)).toEqual(before)
       }
     })
