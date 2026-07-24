@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -9,6 +9,7 @@ import { runCli } from '../src/index.js'
 
 const run = promisify(execFile)
 const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
+const bundle = fileURLToPath(new URL('../dist/index.js', import.meta.url))
 
 async function project() {
   return mkdtemp(join(tmpdir(), 'stacky-cli-'))
@@ -87,5 +88,15 @@ describe('cli', () => {
 
     expect(await runCli(argv(dir, 'add', 'postgres'))).toBe(1)
     expect(await runCli([...argv(dir, 'add', 'postgres'), '--allow-dirty'])).toBe(0)
+  })
+})
+
+describe('built bundle', () => {
+  it('runs `stacky list` under plain node', async ({ skip }) => {
+    const exists = await access(bundle).then(() => true, () => false)
+    if (!exists) skip()
+    const { stdout } = await run('node', [bundle, 'list'])
+    expect(stdout).toContain('sveltekit')
+    expect(stdout).toContain('vite')
   })
 })
