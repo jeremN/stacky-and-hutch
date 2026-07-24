@@ -10,7 +10,7 @@ const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
 describe('real registry', () => {
   it('loads all bricks', async () => {
     const reg = await loadRegistry(bricksDir)
-    expect([...reg.bricks.keys()].sort()).toEqual(['caddy', 'compose', 'postgres', 'sveltekit', 'vite'])
+    expect([...reg.bricks.keys()].sort()).toEqual(['caddy', 'compose', 'postgres', 'sveltekit', 'tanstack-start', 'vite'])
   })
 
   it('resolves the full stack, inferring vite and compose', async () => {
@@ -39,5 +39,24 @@ describe('real registry', () => {
     expect(hooks).toContain('>>> stacky:server-init')
     expect(hooks).toContain('new Pool')
     expect(hooks).toContain('process.env.DATABASE_URL')
+  })
+})
+
+describe('tanstack-start stack', () => {
+  it('resolves vite + tanstack-start + postgres and injects server-init into server.ts', async () => {
+    const reg = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { 'tanstack-start': {}, postgres: {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-tanstack-'))
+    await apply(await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} }), dir, r.graph)
+
+    const server = await readFile(join(dir, 'app/src/server.ts'), 'utf8')
+    expect(server).toContain('new Pool')
+    expect(server).toContain('>>> stacky:server-init')
+
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
+    expect(pkg.dependencies).toHaveProperty('@tanstack/react-start')
+    expect(pkg.dependencies).toHaveProperty('pg')
   })
 })

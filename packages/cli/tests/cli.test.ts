@@ -21,6 +21,7 @@ function argv(dir: string, ...rest: string[]) {
 describe('cli', () => {
   it('add writes stack.toml and exits 0', async () => {
     const dir = await project()
+    await runCli(argv(dir, 'add', 'sveltekit'))
     const code = await runCli(argv(dir, 'add', 'postgres'))
     expect(code).toBe(0)
     expect(await readFile(join(dir, 'stack.toml'), 'utf8')).toContain('postgres')
@@ -50,6 +51,7 @@ describe('cli', () => {
 
   it('plan writes nothing to disk', async () => {
     const dir = await project()
+    await runCli(argv(dir, 'add', 'sveltekit'))
     await runCli(argv(dir, 'add', 'postgres'))
     const before = await readFile(join(dir, 'ops/compose.yml'), 'utf8')
     expect(await runCli(argv(dir, 'plan'))).toBe(0)
@@ -58,6 +60,7 @@ describe('cli', () => {
 
   it('refuses to apply into a dirty git worktree unless --allow-dirty', async () => {
     const dir = await project()
+    await runCli(argv(dir, 'add', 'sveltekit'))
     await run('git', ['init'], { cwd: dir })
     await writeFile(join(dir, 'untracked.txt'), 'work in progress')
 
