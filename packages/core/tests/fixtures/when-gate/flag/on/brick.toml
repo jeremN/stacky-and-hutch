@@ -1,0 +1,6 @@
+[brick]
+name = "on"
+slot = "flag"
+
+[provides]
+capabilities = ["feature-on"]

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { fileState } from '../lockfile.js'
 import { renderTemplate } from '../template.js'
 import type { FileOp, Graph, Lockfile } from '../types.js'
+import { gatePasses, providedCapabilities } from './gate.js'
 
 export interface PlanContext {
   projectDir: string
@@ -13,9 +14,11 @@ export interface PlanContext {
 export async function planBrickFiles(graph: Graph, ctx: PlanContext): Promise<FileOp[]> {
   const ops: FileOp[] = []
   const wanted = new Set<string>()
+  const provided = providedCapabilities(graph)
 
   for (const { brick, params } of graph.bricks) {
     for (const spec of brick.files) {
+      if (!gatePasses(spec.when, provided)) continue
       wanted.add(spec.to)
       const raw = await readFile(join(brick.dir, spec.from), 'utf8')
       const contents = spec.from.endsWith('.eta') ? renderTemplate(raw, params) : raw

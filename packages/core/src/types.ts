@@ -8,9 +8,9 @@ export interface BrickParam {
   prompt?: string
 }
 
-export interface FileSpec { from: string; to: string }
-export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' | 'json' }
-export interface InjectSpec { point?: string; target?: string; marker?: string; from: string }
+export interface FileSpec { from: string; to: string; when?: string }
+export interface FragmentSpec { target: string; from: string; strategy: 'yaml' | 'lines' | 'json'; when?: string }
+export interface InjectSpec { point?: string; target?: string; marker?: string; from: string; when?: string }
 export interface InjectionPoint { name: string; target: string; marker: string }
 
 export interface Brick {

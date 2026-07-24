@@ -1,0 +1,7 @@
+[[slot]]
+name = "host"
+single = true
+
+[[slot]]
+name = "flag"
+single = false

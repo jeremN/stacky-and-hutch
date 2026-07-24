@@ -8,27 +8,29 @@ interface RawBrickFile {
   requires?: Record<string, string>
   provides?: { capabilities?: string[] }
   params?: Record<string, BrickParam>
-  files?: { from: string; to: string }[]
-  fragments?: { target: string; from: string; strategy?: string }[]
-  inject?: { point?: string; target?: string; marker?: string; from: string }[]
+  files?: { from: string; to: string; when?: string }[]
+  fragments?: { target: string; from: string; strategy?: string; when?: string }[]
+  inject?: { point?: string; target?: string; marker?: string; from: string; when?: string }[]
   injection_points?: { name: string; target: string; marker: string }[]
 }
 
-function parseFragment(raw: { target: string; from: string; strategy?: string }, brick: string): FragmentSpec {
+function parseFragment(raw: { target: string; from: string; strategy?: string; when?: string }, brick: string): FragmentSpec {
   const strategy = raw.strategy ?? 'yaml'
   if (strategy !== 'yaml' && strategy !== 'lines' && strategy !== 'json') {
     throw new Error(`brick "${brick}": unknown fragment strategy "${strategy}" (expected "yaml", "lines", or "json")`)
   }
-  return { target: raw.target, from: raw.from, strategy }
+  return { target: raw.target, from: raw.from, strategy, when: raw.when }
 }
 
-function parseInject(raw: { point?: string; target?: string; marker?: string; from: string }, brick: string): InjectSpec {
+function parseInject(raw: { point?: string; target?: string; marker?: string; from: string; when?: string }, brick: string): InjectSpec {
   const hasPoint = raw.point != null
   const hasExplicit = raw.target != null && raw.marker != null
   if (hasPoint === hasExplicit) {
     throw new Error(`brick "${brick}": each [[inject]] needs exactly one of "point" or ("target" and "marker")`)
   }
-  return hasPoint ? { point: raw.point, from: raw.from } : { target: raw.target, marker: raw.marker, from: raw.from }
+  return hasPoint
+    ? { point: raw.point, from: raw.from, when: raw.when }
+    : { target: raw.target, marker: raw.marker, from: raw.from, when: raw.when }
 }
 
 export async function loadRegistry(dir: string): Promise<Registry> {
