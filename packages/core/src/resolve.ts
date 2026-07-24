@@ -79,10 +79,20 @@ export function resolve(manifest: Manifest, registry: Registry): ResolveResult {
       for (const cap of Object.keys(r.brick.requires)) {
         if (provided.has(cap)) continue
         const candidates = known.filter((k) => registry.bricks.get(k)!.provides.includes(cap)).sort()
+        const isInject = cap.startsWith('inject:')
+        const point = cap.slice('inject:'.length)
         if (candidates.length === 0) {
-          errors.push({ kind: 'unsatisfiable', capability: cap, requiredBy: r.brick.name })
+          errors.push(
+            isInject
+              ? { kind: 'unsatisfiable-injection-point', point, requiredBy: r.brick.name }
+              : { kind: 'unsatisfiable', capability: cap, requiredBy: r.brick.name },
+          )
         } else if (candidates.length > 1) {
-          errors.push({ kind: 'ambiguous', capability: cap, candidates, requiredBy: r.brick.name })
+          errors.push(
+            isInject
+              ? { kind: 'ambiguous-injection-point', point, candidates, requiredBy: r.brick.name }
+              : { kind: 'ambiguous', capability: cap, candidates, requiredBy: r.brick.name },
+          )
         } else {
           const only = registry.bricks.get(candidates[0]!)!
           selected.set(only.name, {

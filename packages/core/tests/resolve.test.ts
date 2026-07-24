@@ -79,3 +79,33 @@ describe('resolve', () => {
     expect(r.graph.bricks.map((b) => b.brick.name)).toEqual(['web-b', 'pg'])
   })
 })
+
+describe('resolve — injection points', () => {
+  const injFixture = fileURLToPath(new URL('./fixtures/inject-points', import.meta.url))
+
+  it('reports ambiguous-injection-point when a consumed point has two publishers', async () => {
+    const reg = await loadRegistry(injFixture)
+    const r = resolve({ bricks: { consumer: {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.errors).toContainEqual({
+      kind: 'ambiguous-injection-point', point: 'seam', candidates: ['host-a', 'host-b'], requiredBy: 'consumer',
+    })
+  })
+
+  it('resolves cleanly once a publisher is selected', async () => {
+    const reg = await loadRegistry(injFixture)
+    const r = resolve({ bricks: { consumer: {}, 'host-a': {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(true)
+  })
+
+  it('reports unsatisfiable-injection-point when nobody publishes the point', async () => {
+    const reg = await loadRegistry(injFixture)
+    const r = resolve({ bricks: { orphan: {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.errors).toContainEqual({
+      kind: 'unsatisfiable-injection-point', point: 'nonexistent', requiredBy: 'orphan',
+    })
+  })
+})

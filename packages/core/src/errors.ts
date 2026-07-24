@@ -25,6 +25,8 @@ export function formatError(e: ResolutionError): string {
 
 /** Exit 2 means "I need input from you"; exit 1 means "this is broken". */
 export function exitCodeFor(errors: ResolutionError[]): 1 | 2 {
-  const needsInput = errors.every((e) => e.kind === 'ambiguous' || e.kind === 'missing-param')
+  const needsInput = errors.every(
+    (e) => e.kind === 'ambiguous' || e.kind === 'missing-param' || e.kind === 'ambiguous-injection-point',
+  )
   return errors.length > 0 && needsInput ? 2 : 1
 }
