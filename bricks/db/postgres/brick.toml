@@ -1,11 +1,10 @@
 [brick]
 name    = "postgres"
 slot    = "db"
-summary = "Postgres service, connection helper, and a migrations folder"
+summary = "Postgres service, connection pool, and a migrations folder"
 
 [requires]
 container-runtime = "*"
-ssr                = "*"
 
 [provides]
 capabilities = ["sql-db"]
@@ -27,7 +26,11 @@ target   = "config/.env.example"
 from     = "fragments/env"
 strategy = "lines"
 
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
 [[inject]]
-target = "app/src/hooks.server.ts"
-marker = "stacky:server-init"
-from   = "fragments/server-init.ts"
+point = "server-init"
+from  = "fragments/server-init.ts"

@@ -1,0 +1,40 @@
+[brick]
+name    = "vite"
+slot    = "build"
+summary = "Vite build base — dev/build/preview scripts, Dockerfile, and the plugin seam frameworks extend"
+
+[requires]
+container-runtime = "*"
+
+[provides]
+capabilities = ["build"]
+
+[params]
+port = { type = "string", default = "5173" }
+
+[[files]]
+from = "files/vite.config.ts"
+to   = "app/vite.config.ts"
+
+[[files]]
+from = "files/Dockerfile.eta"
+to   = "app/Dockerfile"
+
+[[files]]
+from = "files/dockerignore"
+to   = "app/.dockerignore"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[fragments]]
+target   = "ops/compose.yml"
+from     = "fragments/compose.yaml.eta"
+strategy = "yaml"
+
+[[injection_points]]
+name   = "vite-plugins"
+target = "app/vite.config.ts"
+marker = "stacky:vite-plugins"

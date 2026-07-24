@@ -8,17 +8,17 @@ import { apply, emptyLock, loadRegistry, plan, resolve } from '../src/index.js'
 const bricksDir = fileURLToPath(new URL('../../../bricks', import.meta.url))
 
 describe('real registry', () => {
-  it('loads all four bricks', async () => {
+  it('loads all bricks', async () => {
     const reg = await loadRegistry(bricksDir)
-    expect([...reg.bricks.keys()].sort()).toEqual(['caddy', 'compose', 'postgres', 'sveltekit'])
+    expect([...reg.bricks.keys()].sort()).toEqual(['caddy', 'compose', 'postgres', 'sveltekit', 'vite'])
   })
 
-  it('resolves the full stack and infers container-runtime', async () => {
+  it('resolves the full stack, inferring vite and compose', async () => {
     const reg = await loadRegistry(bricksDir)
     const r = resolve({ bricks: { sveltekit: {}, caddy: {}, postgres: {} }, overrides: {} }, reg)
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.graph.bricks.map((b) => b.brick.name)).toEqual(['compose', 'sveltekit', 'caddy', 'postgres'])
+    expect(r.graph.bricks.map((b) => b.brick.name)).toEqual(['compose', 'vite', 'sveltekit', 'caddy', 'postgres'])
   })
 
   it('applies the full stack to a temp dir', async () => {
@@ -37,5 +37,7 @@ describe('real registry', () => {
     const hooks = await readFile(join(dir, 'app/src/hooks.server.ts'), 'utf8')
     expect(hooks).toContain('DATABASE_URL')
     expect(hooks).toContain('>>> stacky:server-init')
+    expect(hooks).toContain('new Pool')
+    expect(hooks).toContain('process.env.DATABASE_URL')
   })
 })

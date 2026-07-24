@@ -1,31 +1,28 @@
 [brick]
 name    = "sveltekit"
 slot    = "web"
-summary = "SvelteKit app with a hooks.server.ts carrying stacky marker regions"
+summary = "SvelteKit app layered on the Vite base"
 
 [requires]
-container-runtime = "*"
+build = "*"
 
 [provides]
-capabilities = ["ssr", "http-origin"]
-
-[params]
-port = { type = "string", default = "5173" }
+capabilities = ["http-origin"]
 
 [[files]]
 from = "files/hooks.server.ts"
 to   = "app/src/hooks.server.ts"
 
-[[files]]
-from = "files/Dockerfile.eta"
-to   = "app/Dockerfile"
-
 [[fragments]]
-target   = "ops/compose.yml"
-from     = "fragments/compose.yaml.eta"
-strategy = "yaml"
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
 
-[[fragments]]
-target   = "config/.env.example"
-from     = "fragments/env.eta"
-strategy = "lines"
+[[injection_points]]
+name   = "server-init"
+target = "app/src/hooks.server.ts"
+marker = "stacky:server-init"
+
+[[inject]]
+point = "vite-plugins"
+from  = "fragments/plugin.ts"

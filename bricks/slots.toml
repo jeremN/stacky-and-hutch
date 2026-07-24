@@ -4,6 +4,10 @@ name = "container"
 single = true
 
 [[slot]]
+name = "build"
+single = true
+
+[[slot]]
 name = "web"
 single = true
 
@@ -11,6 +15,8 @@ single = true
 name = "edge"
 single = true
 
+# db is multi-occupancy: it hosts the engine (postgres) AND the ORM (drizzle).
+# Two engines are still caught by capability ambiguity when an ORM consumes sql-db.
 [[slot]]
 name = "db"
-single = true
+single = false

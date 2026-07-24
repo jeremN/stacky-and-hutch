@@ -1,2 +1,3 @@
-import { DATABASE_URL } from '$env/static/private'
-export const dbUrl = DATABASE_URL
+import { Pool } from 'pg'
+
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL })
