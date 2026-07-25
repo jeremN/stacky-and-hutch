@@ -47,3 +47,18 @@ when     = "svelte"
 point = "vitest-plugins"
 from  = "fragments/plugin.svelte.js"
 when  = "svelte"
+
+[[files]]
+from = "files/Counter.tsx"
+to   = "app/src/lib/Counter.tsx"
+when = "react"
+[[files]]
+from = "files/Counter.test.tsx"
+to   = "app/src/lib/Counter.test.tsx"
+when = "react"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.react.json"
+strategy = "json"
+when     = "react"
