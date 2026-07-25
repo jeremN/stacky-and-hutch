@@ -55,10 +55,18 @@ describe('tanstack-start stack', () => {
     const server = await readFile(join(dir, 'app/src/server.ts'), 'utf8')
     expect(server).toContain('new Pool')
     expect(server).toContain('>>> stacky:server-init')
+    expect(server).toContain('createServerEntry')
+
+    const router = await readFile(join(dir, 'app/src/router.tsx'), 'utf8')
+    expect(router).toContain('createRouter')
+    expect(router).toContain('./routeTree.gen')
 
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
     expect(pkg.dependencies).toHaveProperty('@tanstack/react-start')
     expect(pkg.dependencies).toHaveProperty('pg')
+    // the react framework brick owns its own React types (no vitest brick here)
+    expect(pkg.devDependencies).toHaveProperty('@types/react')
+    expect(pkg.devDependencies).toHaveProperty('@types/react-dom')
   })
 })
 
