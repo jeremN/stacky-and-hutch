@@ -64,6 +64,9 @@ describe('tanstack-start stack', () => {
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
     expect(pkg.dependencies).toHaveProperty('@tanstack/react-start')
     expect(pkg.dependencies).toHaveProperty('pg')
+    // the react framework brick owns its own React types (no vitest brick here)
+    expect(pkg.devDependencies).toHaveProperty('@types/react')
+    expect(pkg.devDependencies).toHaveProperty('@types/react-dom')
   })
 })
 
