@@ -3,20 +3,25 @@
 import { createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 // >>> stacky:router-imports
+import { QueryClient } from '@tanstack/react-query'
+import { routerWithQueryClient } from '@tanstack/react-router-with-query'
 // <<< stacky:router-imports
 
 export function getRouter() {
   // >>> stacky:router-setup
+  const queryClient = new QueryClient()
   // <<< stacky:router-setup
   const router = createRouter({
     routeTree,
     scrollRestoration: true,
     context: {
       // >>> stacky:router-context
+      queryClient,
       // <<< stacky:router-context
     },
   })
   // >>> stacky:router-wrap
+  routerWithQueryClient(router, queryClient)
   // <<< stacky:router-wrap
   return router
 }

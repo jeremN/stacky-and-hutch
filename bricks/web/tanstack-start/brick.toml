@@ -49,6 +49,36 @@ name   = "app-shell"
 target = "app/src/routes/__root.tsx"
 marker = "stacky:app-shell"
 
+[[injection_points]]
+name   = "router-imports"
+target = "app/src/router.tsx"
+marker = "stacky:router-imports"
+
+[[injection_points]]
+name   = "router-setup"
+target = "app/src/router.tsx"
+marker = "stacky:router-setup"
+
+[[injection_points]]
+name   = "router-context"
+target = "app/src/router.tsx"
+marker = "stacky:router-context"
+
+[[injection_points]]
+name   = "router-wrap"
+target = "app/src/router.tsx"
+marker = "stacky:router-wrap"
+
+[[injection_points]]
+name   = "root-imports"
+target = "app/src/routes/__root.tsx"
+marker = "stacky:root-imports"
+
+[[injection_points]]
+name   = "root-context"
+target = "app/src/routes/__root.tsx"
+marker = "stacky:root-context"
+
 [[inject]]
 point = "vite-plugins"
 from  = "fragments/plugin.ts"

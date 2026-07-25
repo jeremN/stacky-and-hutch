@@ -1,0 +1,1 @@
+  routerWithQueryClient(router, queryClient)

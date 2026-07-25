@@ -1,0 +1,72 @@
+[brick]
+name    = "tanstack-query"
+slot    = "data"
+summary = "TanStack Query — a QueryClient provided to the app"
+
+[requires]
+http-origin = "*"
+
+[[files]]
+from = "files/QueryDemo.svelte"
+to   = "app/src/lib/QueryDemo.svelte"
+when = "svelte"
+
+[[files]]
+from = "files/QueryDemo.tsx"
+to   = "app/src/lib/QueryDemo.tsx"
+when = "react"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.svelte.json"
+strategy = "json"
+when     = "svelte"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.react.json"
+strategy = "json"
+when     = "react"
+
+[[inject]]
+point = "app-head"
+from  = "fragments/provider.svelte.ts"
+when  = "svelte"
+
+# The six react seams are consumed by explicit target+marker (not `point`) — only
+# tanstack-start publishes them (no sveltekit equivalent exists), and the registry
+# turns every `point`-based inject into an unconditional `requires`, `when` gate or
+# not. Point-based here would force tanstack-start into any sveltekit + tanstack-query
+# stack (a same-slot conflict with sveltekit). Explicit target+marker skips that
+# auto-requires while still writing at the identical marker; the `when = "react"`
+# gate alone is enough correctness — on a svelte stack these six specs never fire.
+[[inject]]
+target = "app/src/router.tsx"
+marker = "stacky:router-imports"
+from   = "fragments/router-imports.react.ts"
+when   = "react"
+[[inject]]
+target = "app/src/router.tsx"
+marker = "stacky:router-setup"
+from   = "fragments/router-setup.react.ts"
+when   = "react"
+[[inject]]
+target = "app/src/router.tsx"
+marker = "stacky:router-context"
+from   = "fragments/router-context.react.ts"
+when   = "react"
+[[inject]]
+target = "app/src/router.tsx"
+marker = "stacky:router-wrap"
+from   = "fragments/router-wrap.react.ts"
+when   = "react"
+[[inject]]
+target = "app/src/routes/__root.tsx"
+marker = "stacky:root-imports"
+from   = "fragments/root-imports.react.ts"
+when   = "react"
+[[inject]]
+target = "app/src/routes/__root.tsx"
+marker = "stacky:root-context"
+from   = "fragments/root-context.react.ts"
+when   = "react"

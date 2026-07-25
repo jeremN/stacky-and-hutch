@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['better-auth', 'caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck', 'vitest'])
+      expect(removable).toEqual(['better-auth', 'caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'tanstack-query', 'typecheck', 'vitest'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -413,6 +413,36 @@ describe('round trip — both framework stacks', () => {
     // the svelteTesting plugin is gated to svelte only — in the config text
     expect(sv.cfg).toContain('svelteTesting()')
     expect(rx.cfg).not.toContain('svelteTesting')
+  })
+
+  it('tanstack-query wires each framework natively (parity capstone)', async () => {
+    const svDir = await mkdtemp(join(tmpdir(), 'stacky-query-parity-sv-'))
+    await converge(svDir, { bricks: { vite: {}, sveltekit: {}, 'tanstack-query': {} }, overrides: {} })
+    const svLayout = await readFile(join(svDir, 'app/src/routes/+layout.svelte'), 'utf8')
+    const svPkg = await readFile(join(svDir, 'app/package.json'), 'utf8')
+
+    const rxDir = await mkdtemp(join(tmpdir(), 'stacky-query-parity-rx-'))
+    await converge(rxDir, { bricks: { vite: {}, 'tanstack-start': {}, 'tanstack-query': {} }, overrides: {} })
+    const rxRouter = await readFile(join(rxDir, 'app/src/router.tsx'), 'utf8')
+    const rxRoot = await readFile(join(rxDir, 'app/src/routes/__root.tsx'), 'utf8')
+    const rxPkg = await readFile(join(rxDir, 'app/package.json'), 'utf8')
+
+    // svelte
+    expect(svLayout).toContain('setQueryClientContext')
+    expect(svLayout).toContain("from '@tanstack/svelte-query'")
+    expect(svPkg).toContain('@tanstack/svelte-query')
+    expect(svPkg).not.toContain('@tanstack/react-query')
+    // react
+    expect(rxRouter).toContain('routerWithQueryClient(router, queryClient)')
+    expect(rxRoot).toContain('queryClient: QueryClient')
+    expect(rxRoot).toContain('createRootRouteWithContext')
+    expect(rxPkg).toContain('@tanstack/react-query')
+    expect(rxPkg).toContain('@tanstack/react-router-with-query')
+    expect(rxPkg).not.toContain('@tanstack/svelte-query')
+    // goldens
+    await expect(svLayout).toMatchFileSnapshot('./golden/sveltekit.query.layout.svelte')
+    await expect(rxRouter).toMatchFileSnapshot('./golden/tanstack.query.router.tsx')
+    await expect(rxRoot).toMatchFileSnapshot('./golden/tanstack.query.root.tsx')
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {

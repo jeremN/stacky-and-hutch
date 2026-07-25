@@ -59,3 +59,8 @@ single = true
 [[slot]]
 name = "auth"
 single = true
+
+# Data-fetching layer (TanStack Query, etc.) — one per project.
+[[slot]]
+name = "data"
+single = true

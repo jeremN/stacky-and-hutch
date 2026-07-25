@@ -8,10 +8,12 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 // >>> stacky:root-imports
+import type { QueryClient } from '@tanstack/react-query'
 // <<< stacky:root-imports
 
 type RouterContext = object & {
   // >>> stacky:root-context
+  queryClient: QueryClient
   // <<< stacky:root-context
 }
 
