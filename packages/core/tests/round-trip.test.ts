@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'iconify', 'postgres', 'sqlite', 'tailwind'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'sqlite', 'tailwind'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -191,6 +191,36 @@ describe('round trip — both framework stacks', () => {
     expect(twOnly).toContain("import '../app.css'")
     expect(twOnly).not.toContain('@iconify/svelte')
     expect(twOnly).not.toContain('ph:heart')
+  })
+
+  it('eslint composes framework-native flat config per stack (parity)', async () => {
+    async function styled(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-eslint-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, eslint: {} }, overrides: {} })
+      return dir
+    }
+    const svDir = await styled('sveltekit')
+    const rxDir = await styled('tanstack-start')
+    const svCfg = await readFile(join(svDir, 'app/eslint.config.mjs'), 'utf8')
+    const rxCfg = await readFile(join(rxDir, 'app/eslint.config.mjs'), 'utf8')
+    const svPkg = await readFile(join(svDir, 'app/package.json'), 'utf8')
+    const rxPkg = await readFile(join(rxDir, 'app/package.json'), 'utf8')
+
+    expect(svCfg).toContain('eslint-plugin-svelte')
+    expect(rxCfg).toContain('eslint-plugin-react')
+    expect(svCfg).not.toContain('eslint-plugin-react')
+    expect(rxCfg).not.toContain('eslint-plugin-svelte')
+    // eslint-config-prettier is applied LAST — pushed AFTER the seam's close marker, on BOTH stacks
+    for (const cfg of [svCfg, rxCfg]) {
+      expect(cfg.indexOf('configs.push(prettier)')).toBeGreaterThan(cfg.lastIndexOf('<<< stacky:eslint-config'))
+    }
+    expect(svPkg).toContain('eslint-plugin-svelte')
+    expect(svPkg).not.toContain('eslint-plugin-react')
+    expect(rxPkg).toContain('eslint-plugin-react')
+    expect(rxPkg).not.toContain('eslint-plugin-svelte')
+
+    await expect(svCfg).toMatchFileSnapshot('./golden/sveltekit.eslint.config.mjs')
+    await expect(rxCfg).toMatchFileSnapshot('./golden/tanstack.eslint.config.mjs')
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {

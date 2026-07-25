@@ -1,0 +1,38 @@
+[brick]
+name    = "eslint"
+slot    = "lint"
+summary = "ESLint flat config — framework-agnostic base + gated Svelte/React blocks"
+
+[[files]]
+from = "files/eslint.config.mjs"
+to   = "app/eslint.config.mjs"
+
+[[injection_points]]
+name   = "eslint-config"
+target = "app/eslint.config.mjs"
+marker = "stacky:eslint-config"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.svelte.json"
+strategy = "json"
+when     = "svelte"
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.react.json"
+strategy = "json"
+when     = "react"
+
+[[inject]]
+point = "eslint-config"
+from  = "fragments/config.svelte.js"
+when  = "svelte"
+[[inject]]
+point = "eslint-config"
+from  = "fragments/config.react.js"
+when  = "react"

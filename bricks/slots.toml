@@ -21,6 +21,11 @@ single = true
 name = "icons"
 single = true
 
+# Linter (ESLint, etc.) — one per project.
+[[slot]]
+name = "lint"
+single = true
+
 [[slot]]
 name = "edge"
 single = true
