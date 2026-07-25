@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "auth:migrate": "npx @better-auth/cli migrate"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.0"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "^1.4.0"
+  }
+}
