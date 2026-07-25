@@ -292,6 +292,19 @@ describe('golden files — per framework', () => {
     await expect(root).toMatchFileSnapshot('./golden/tanstack.root.tsx')
   })
 
+  it('each framework owns a flavored tsconfig', async () => {
+    const svDir = await mkdtemp(join(tmpdir(), 'stacky-tsc-sv-'))
+    await converge(svDir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
+    const rxDir = await mkdtemp(join(tmpdir(), 'stacky-tsc-rx-'))
+    await converge(rxDir, { bricks: { vite: {}, 'tanstack-start': {} }, overrides: {} })
+    const svTs = await readFile(join(svDir, 'app/tsconfig.json'), 'utf8')
+    const rxTs = await readFile(join(rxDir, 'app/tsconfig.json'), 'utf8')
+    expect(svTs).toContain('.svelte-kit/tsconfig.json')
+    expect(rxTs).toContain('react-jsx')
+    await expect(svTs).toMatchFileSnapshot('./golden/sveltekit.tsconfig.json')
+    await expect(rxTs).toMatchFileSnapshot('./golden/tanstack.tsconfig.json')
+  })
+
   it('[sveltekit] sqlite stack matches the committed goldens', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'stacky-golden-sqlite-'))
     await converge(dir, { bricks: { vite: {}, sveltekit: {}, sqlite: {}, drizzle: {} }, overrides: {} })

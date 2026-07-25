@@ -21,6 +21,10 @@ to   = "app/src/routes/+layout.svelte"
 from = "files/+page.svelte"
 to   = "app/src/routes/+page.svelte"
 
+[[files]]
+from = "files/tsconfig.json"
+to   = "app/tsconfig.json"
+
 [[fragments]]
 target   = "app/package.json"
 from     = "fragments/package.json"
