@@ -288,6 +288,20 @@ describe('round trip — both framework stacks', () => {
     await readFile(join(dir, 'app/src/demo.test.ts'), 'utf8')
   })
 
+  it('[sveltekit] vitest gates svelte component testing + svelteTesting plugin', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-vitest-sv-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, vitest: {} }, overrides: {} })
+    const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+    const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+    expect(cfg).toContain('testPlugins.push(svelteTesting())')
+    expect(cfg).toContain("from '@testing-library/svelte/vite'")
+    expect(pkg).toContain('@testing-library/svelte')
+    // the component + test are present
+    await readFile(join(dir, 'app/src/lib/Counter.svelte'), 'utf8')
+    await readFile(join(dir, 'app/src/lib/Counter.svelte.test.ts'), 'utf8')
+    await expect(cfg).toMatchFileSnapshot('./golden/sveltekit.vitest.config.ts')
+  })
+
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {
     const registry = await loadRegistry(bricksDir)
     const r = resolve({ bricks: { compose: {}, vite: {}, tailwind: {} }, overrides: {} }, registry)

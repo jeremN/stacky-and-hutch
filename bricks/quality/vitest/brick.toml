@@ -27,3 +27,23 @@ marker = "stacky:vitest-plugins"
 target   = "app/package.json"
 from     = "fragments/package.json"
 strategy = "json"
+
+[[files]]
+from = "files/Counter.svelte"
+to   = "app/src/lib/Counter.svelte"
+when = "svelte"
+[[files]]
+from = "files/Counter.svelte.test.ts"
+to   = "app/src/lib/Counter.svelte.test.ts"
+when = "svelte"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.svelte.json"
+strategy = "json"
+when     = "svelte"
+
+[[inject]]
+point = "vitest-plugins"
+from  = "fragments/plugin.svelte.js"
+when  = "svelte"
