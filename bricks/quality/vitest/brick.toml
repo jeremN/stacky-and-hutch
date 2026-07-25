@@ -1,0 +1,29 @@
+[brick]
+name    = "vitest"
+slot    = "test"
+summary = "Vitest + jsdom test runner — agnostic base + gated Svelte/React component testing"
+
+[requires]
+build = "*"
+
+[[files]]
+from = "files/vitest.config.ts"
+to   = "app/vitest.config.ts"
+
+[[files]]
+from = "files/vitest-setup.ts"
+to   = "app/vitest-setup.ts"
+
+[[files]]
+from = "files/demo.test.ts"
+to   = "app/src/demo.test.ts"
+
+[[injection_points]]
+name   = "vitest-plugins"
+target = "app/vitest.config.ts"
+marker = "stacky:vitest-plugins"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"

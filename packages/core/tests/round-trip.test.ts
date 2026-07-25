@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck', 'vitest'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -267,6 +267,25 @@ describe('round trip — both framework stacks', () => {
     await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts?: Record<string, string> }
     expect(pkg.scripts?.check).toBeUndefined()
+  })
+
+  it('vitest core is framework-agnostic — config seam, setup, unit test, scripts, deps', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-vitest-core-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, vitest: {} }, overrides: {} })
+    const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as {
+      scripts: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+    expect(cfg).toContain('>>> stacky:vitest-plugins')
+    expect(cfg).toContain("mergeConfig(")
+    expect(cfg).toContain("environment: 'jsdom'")
+    expect(pkg.scripts.test).toBe('vitest run')
+    expect(pkg.devDependencies).toHaveProperty('vitest')
+    expect(pkg.devDependencies).toHaveProperty('jsdom')
+    expect(pkg.devDependencies).toHaveProperty('@testing-library/jest-dom')
+    // the agnostic unit test file is present
+    await readFile(join(dir, 'app/src/demo.test.ts'), 'utf8')
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {
