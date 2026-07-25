@@ -1,2 +1,2 @@
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-const stackyPlugins = [tanstackStart()]
+stackyPlugins.push(tanstackStart())

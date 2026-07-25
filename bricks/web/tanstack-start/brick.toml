@@ -7,11 +7,19 @@ summary = "TanStack Start (React) app layered on the Vite base"
 build = "*"
 
 [provides]
-capabilities = ["http-origin"]
+capabilities = ["http-origin", "react"]
 
 [[files]]
 from = "files/server.ts"
 to   = "app/src/server.ts"
+
+[[files]]
+from = "files/__root.tsx"
+to   = "app/src/routes/__root.tsx"
+
+[[files]]
+from = "files/index.tsx"
+to   = "app/src/routes/index.tsx"
 
 [[fragments]]
 target   = "app/package.json"
@@ -22,6 +30,16 @@ strategy = "json"
 name   = "server-init"
 target = "app/src/server.ts"
 marker = "stacky:server-init"
+
+[[injection_points]]
+name   = "app-head"
+target = "app/src/routes/__root.tsx"
+marker = "stacky:app-head"
+
+[[injection_points]]
+name   = "app-shell"
+target = "app/src/routes/__root.tsx"
+marker = "stacky:app-shell"
 
 [[inject]]
 point = "vite-plugins"
