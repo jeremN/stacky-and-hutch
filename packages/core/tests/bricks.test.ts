@@ -70,6 +70,28 @@ describe('tanstack-start stack', () => {
   })
 })
 
+describe('sveltekit stack', () => {
+  it('resolves vite + sveltekit and emits the buildable project files', async () => {
+    const reg = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { vite: {}, sveltekit: {} }, overrides: {} }, reg)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-svktcomplete-'))
+    await apply(await plan(r.graph, { projectDir: dir, lock: emptyLock(), overrides: {} }), dir, r.graph)
+
+    const cfg = await readFile(join(dir, 'app/svelte.config.js'), 'utf8')
+    expect(cfg).toContain('@sveltejs/adapter-auto')
+    expect(cfg).toContain('vitePreprocess')
+
+    const html = await readFile(join(dir, 'app/src/app.html'), 'utf8')
+    expect(html).toContain('%sveltekit.body%')
+    expect(html).toContain('%sveltekit.head%')
+
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8'))
+    expect(pkg.devDependencies).toHaveProperty('@sveltejs/adapter-auto')
+  })
+})
+
 describe('drizzle + postgres multi-contributor server-init', () => {
   it('lands both the pool and the drizzle client in one marker region', async () => {
     const reg = await loadRegistry(bricksDir)
