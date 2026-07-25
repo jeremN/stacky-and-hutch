@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'postgres', 'sqlite', 'tailwind'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'iconify', 'postgres', 'sqlite', 'tailwind'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -48,7 +48,13 @@ describe('round trip — both framework stacks', () => {
 
         await converge(dir, { bricks: { ...brickBase, [brick]: {} }, overrides: {} })
         const during = await snapshotTree(dir)
-        expect(Object.keys(during).length).toBeGreaterThan(Object.keys(before).length)
+        // Adding the brick must change GENERATED output — a new file (most bricks) or
+        // modified content in an existing one (injection/fragment-only bricks like iconify).
+        // Exclude the manifest/lock, which converge() always rewrites, so a silent no-op
+        // brick can't pass on bookkeeping changes alone.
+        const generated = (t: Record<string, string>) =>
+          Object.fromEntries(Object.entries(t).filter(([p]) => p !== 'stack.toml' && p !== 'stack.lock'))
+        expect(generated(during)).not.toEqual(generated(before))
 
         await converge(dir, { bricks: structuredClone(brickBase), overrides: {} })
         expect(await snapshotTree(dir)).toEqual(before)
@@ -141,6 +147,63 @@ describe('round trip — both framework stacks', () => {
     expect(rx.viteCfg).toContain('stackyPlugins.push(tailwindcss())')
     expect(sv.importsCss && rx.importsCss).toBe(true)
     expect(sv.css).toEqual(rx.css) // Tailwind contributes byte-identical css on both stacks
+  })
+
+  it('iconify emits framework-native bytes on each stack (parity capstone)', async () => {
+    async function styled(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-parity-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, tailwind: {}, iconify: {} }, overrides: {} })
+      return dir
+    }
+    const svDir = await styled('sveltekit')
+    const rxDir = await styled('tanstack-start')
+    const svLayout = await readFile(join(svDir, 'app/src/routes/+layout.svelte'), 'utf8')
+    const rxRoot = await readFile(join(rxDir, 'app/src/routes/__root.tsx'), 'utf8')
+    const svPkg = await readFile(join(svDir, 'app/package.json'), 'utf8')
+    const rxPkg = await readFile(join(rxDir, 'app/package.json'), 'utf8')
+
+    expect(svLayout).toContain("import Icon from '@iconify/svelte'")
+    expect(rxRoot).toContain("import { Icon } from '@iconify/react'")
+    expect(svPkg).toContain('@iconify/svelte')
+    expect(rxPkg).toContain('@iconify/react')
+    expect(svPkg).not.toContain('@iconify/react')   // wrong-framework dep never leaks
+    expect(rxPkg).not.toContain('@iconify/svelte')
+
+    const render = '<Icon icon="ph:heart" />'       // render markup is byte-identical
+    expect(svLayout).toContain(render)
+    expect(rxRoot).toContain(render)
+
+    await expect(svLayout).toMatchFileSnapshot('./golden/sveltekit.styled.layout.svelte')
+    await expect(rxRoot).toMatchFileSnapshot('./golden/tanstack.styled.root.tsx')
+    await expect(svPkg).toMatchFileSnapshot('./golden/sveltekit.styled.package.json')
+    await expect(rxPkg).toMatchFileSnapshot('./golden/tanstack.styled.package.json')
+  })
+
+  it('[sveltekit] removing iconify leaves the tailwind css import intact (aggregation survival)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-agg-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, tailwind: {}, iconify: {} }, overrides: {} })
+    const both = await readFile(join(dir, 'app/src/routes/+layout.svelte'), 'utf8')
+    expect(both).toContain("import '../app.css'")
+    expect(both).toContain("import Icon from '@iconify/svelte'")
+
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, tailwind: {} }, overrides: {} })
+    const twOnly = await readFile(join(dir, 'app/src/routes/+layout.svelte'), 'utf8')
+    expect(twOnly).toContain("import '../app.css'")
+    expect(twOnly).not.toContain('@iconify/svelte')
+    expect(twOnly).not.toContain('ph:heart')
+  })
+
+  it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {
+    const registry = await loadRegistry(bricksDir)
+    const r = resolve({ bricks: { compose: {}, vite: {}, tailwind: {} }, overrides: {} }, registry)
+    expect(r.ok).toBe(false)
+    if (r.ok) throw new Error('expected an ambiguous injection point')
+    const err = r.errors.find((e) => e.kind === 'ambiguous-injection-point')
+    expect(err).toMatchObject({
+      kind: 'ambiguous-injection-point',
+      point: 'app-head',
+      candidates: ['sveltekit', 'tanstack-start'],
+    })
   })
 })
 

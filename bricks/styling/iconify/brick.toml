@@ -1,0 +1,33 @@
+[brick]
+name    = "iconify"
+slot    = "icons"
+summary = "Iconify icon component (framework-native)"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.svelte.json"
+strategy = "json"
+when     = "svelte"
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.react.json"
+strategy = "json"
+when     = "react"
+
+[[inject]]
+point = "app-head"
+from  = "fragments/head.svelte.ts"
+when  = "svelte"
+[[inject]]
+point = "app-head"
+from  = "fragments/head.react.ts"
+when  = "react"
+
+[[inject]]
+point = "app-shell"
+from  = "fragments/render.svelte.html"
+when  = "svelte"
+[[inject]]
+point = "app-shell"
+from  = "fragments/render.react.tsx"
+when  = "react"

@@ -16,6 +16,11 @@ single = true
 name = "css"
 single = true
 
+# Icon set (Iconify, etc.) — one per project.
+[[slot]]
+name = "icons"
+single = true
+
 [[slot]]
 name = "edge"
 single = true
