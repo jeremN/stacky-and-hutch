@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'sqlite', 'tailwind'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -221,6 +221,26 @@ describe('round trip — both framework stacks', () => {
 
     await expect(svCfg).toMatchFileSnapshot('./golden/sveltekit.eslint.config.mjs')
     await expect(rxCfg).toMatchFileSnapshot('./golden/tanstack.eslint.config.mjs')
+  })
+
+  it('prettier is agnostic + gates only the svelte plugin', async () => {
+    async function bits(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-prettier-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, prettier: {} }, overrides: {} })
+      const cfg = await readFile(join(dir, 'app/prettier.config.mjs'), 'utf8')
+      const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+      return { cfg, pkg }
+    }
+    const sv = await bits('sveltekit')
+    const rx = await bits('tanstack-start')
+    expect(sv.cfg).toContain("config.plugins.push('prettier-plugin-svelte')")
+    expect(rx.cfg).not.toContain('prettier-plugin-svelte')     // react needs no plugin
+    expect(sv.pkg).toContain('prettier-plugin-svelte')
+    expect(rx.pkg).not.toContain('prettier-plugin-svelte')
+    expect(sv.pkg).toContain('"format"')
+    expect(rx.pkg).toContain('"format"')
+    await expect(sv.cfg).toMatchFileSnapshot('./golden/sveltekit.prettier.config.mjs')
+    await expect(rx.cfg).toMatchFileSnapshot('./golden/tanstack.prettier.config.mjs')
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {

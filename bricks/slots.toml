@@ -26,6 +26,11 @@ single = true
 name = "lint"
 single = true
 
+# Formatter (Prettier, etc.) — one per project.
+[[slot]]
+name = "format"
+single = true
+
 [[slot]]
 name = "edge"
 single = true
