@@ -1,8 +1,9 @@
+import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 // >>> stacky:server-init
 // <<< stacky:server-init
 
-export default {
-  fetch(_request: Request): Response {
-    return new Response('ok')
+export default createServerEntry({
+  fetch(request) {
+    return handler.fetch(request)
   },
-}
+})

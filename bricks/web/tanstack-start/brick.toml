@@ -22,6 +22,10 @@ from = "files/index.tsx"
 to   = "app/src/routes/index.tsx"
 
 [[files]]
+from = "files/router.tsx"
+to   = "app/src/router.tsx"
+
+[[files]]
 from = "files/tsconfig.json"
 to   = "app/tsconfig.json"
 
