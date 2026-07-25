@@ -36,6 +36,11 @@ single = true
 name = "typecheck"
 single = true
 
+# Test runner (Vitest, etc.) — one per project.
+[[slot]]
+name = "test"
+single = true
+
 [[slot]]
 name = "edge"
 single = true

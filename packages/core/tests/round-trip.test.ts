@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck', 'vitest'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -267,6 +267,79 @@ describe('round trip — both framework stacks', () => {
     await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts?: Record<string, string> }
     expect(pkg.scripts?.check).toBeUndefined()
+  })
+
+  it('vitest core is framework-agnostic — config seam, setup, unit test, scripts, deps', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-vitest-core-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, vitest: {} }, overrides: {} })
+    const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as {
+      scripts: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+    expect(cfg).toContain('>>> stacky:vitest-plugins')
+    expect(cfg).toContain("mergeConfig(")
+    expect(cfg).toContain("environment: 'jsdom'")
+    expect(pkg.scripts.test).toBe('vitest run')
+    expect(pkg.devDependencies).toHaveProperty('vitest')
+    expect(pkg.devDependencies).toHaveProperty('jsdom')
+    expect(pkg.devDependencies).toHaveProperty('@testing-library/jest-dom')
+    // the agnostic unit test file is present
+    await readFile(join(dir, 'app/src/demo.test.ts'), 'utf8')
+  })
+
+  it('[sveltekit] vitest gates svelte component testing + svelteTesting plugin', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-vitest-sv-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, vitest: {} }, overrides: {} })
+    const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+    const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+    expect(cfg).toContain('testPlugins.push(svelteTesting())')
+    expect(cfg).toContain("from '@testing-library/svelte/vite'")
+    expect(pkg).toContain('@testing-library/svelte')
+    // the component + test are present
+    await readFile(join(dir, 'app/src/lib/Counter.svelte'), 'utf8')
+    await readFile(join(dir, 'app/src/lib/Counter.svelte.test.ts'), 'utf8')
+    await expect(cfg).toMatchFileSnapshot('./golden/sveltekit.vitest.config.ts')
+  })
+
+  it('[tanstack-start] vitest gates react component testing; no svelte plugin leaks', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-vitest-rx-'))
+    await converge(dir, { bricks: { vite: {}, 'tanstack-start': {}, vitest: {} }, overrides: {} })
+    const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+    const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+    expect(cfg).not.toContain('svelteTesting')            // empty seam on react
+    expect(pkg).toContain('@testing-library/react')
+    expect(pkg).toContain('@testing-library/dom')
+    expect(pkg).not.toContain('@testing-library/svelte')
+    await readFile(join(dir, 'app/src/lib/Counter.tsx'), 'utf8')
+    await readFile(join(dir, 'app/src/lib/Counter.test.tsx'), 'utf8')
+    await expect(cfg).toMatchFileSnapshot('./golden/tanstack.vitest.config.ts')
+  })
+
+  it('vitest gives both stacks a test surface with framework-correct component testing (parity)', async () => {
+    async function bits(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-vitest-parity-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, vitest: {} }, overrides: {} })
+      const cfg = await readFile(join(dir, 'app/vitest.config.ts'), 'utf8')
+      const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as {
+        scripts: Record<string, string>
+        devDependencies: Record<string, string>
+      }
+      return { cfg, pkg }
+    }
+    const sv = await bits('sveltekit')
+    const rx = await bits('tanstack-start')
+    // both stacks run tests the same way
+    expect(sv.pkg.scripts.test).toBe('vitest run')
+    expect(rx.pkg.scripts.test).toBe('vitest run')
+    // right testing library present, wrong absent — in package.json
+    expect(sv.pkg.devDependencies).toHaveProperty('@testing-library/svelte')
+    expect(sv.pkg.devDependencies).not.toHaveProperty('@testing-library/react')
+    expect(rx.pkg.devDependencies).toHaveProperty('@testing-library/react')
+    expect(rx.pkg.devDependencies).not.toHaveProperty('@testing-library/svelte')
+    // the svelteTesting plugin is gated to svelte only — in the config text
+    expect(sv.cfg).toContain('svelteTesting()')
+    expect(rx.cfg).not.toContain('svelteTesting')
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {
