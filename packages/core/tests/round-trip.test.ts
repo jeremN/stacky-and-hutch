@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'iconify', 'postgres', 'sqlite', 'tailwind'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -193,6 +193,82 @@ describe('round trip — both framework stacks', () => {
     expect(twOnly).not.toContain('ph:heart')
   })
 
+  it('eslint composes framework-native flat config per stack (parity)', async () => {
+    async function styled(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-eslint-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, eslint: {} }, overrides: {} })
+      return dir
+    }
+    const svDir = await styled('sveltekit')
+    const rxDir = await styled('tanstack-start')
+    const svCfg = await readFile(join(svDir, 'app/eslint.config.mjs'), 'utf8')
+    const rxCfg = await readFile(join(rxDir, 'app/eslint.config.mjs'), 'utf8')
+    const svPkg = await readFile(join(svDir, 'app/package.json'), 'utf8')
+    const rxPkg = await readFile(join(rxDir, 'app/package.json'), 'utf8')
+
+    expect(svCfg).toContain('eslint-plugin-svelte')
+    expect(rxCfg).toContain('eslint-plugin-react')
+    expect(svCfg).not.toContain('eslint-plugin-react')
+    expect(rxCfg).not.toContain('eslint-plugin-svelte')
+    // eslint-config-prettier is applied LAST — pushed AFTER the seam's close marker, on BOTH stacks
+    for (const cfg of [svCfg, rxCfg]) {
+      expect(cfg.indexOf('configs.push(prettier)')).toBeGreaterThan(cfg.lastIndexOf('<<< stacky:eslint-config'))
+    }
+    expect(svPkg).toContain('eslint-plugin-svelte')
+    expect(svPkg).not.toContain('eslint-plugin-react')
+    expect(rxPkg).toContain('eslint-plugin-react')
+    expect(rxPkg).not.toContain('eslint-plugin-svelte')
+
+    await expect(svCfg).toMatchFileSnapshot('./golden/sveltekit.eslint.config.mjs')
+    await expect(rxCfg).toMatchFileSnapshot('./golden/tanstack.eslint.config.mjs')
+  })
+
+  it('prettier is agnostic + gates only the svelte plugin', async () => {
+    async function bits(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-prettier-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, prettier: {} }, overrides: {} })
+      const cfg = await readFile(join(dir, 'app/prettier.config.mjs'), 'utf8')
+      const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+      return { cfg, pkg }
+    }
+    const sv = await bits('sveltekit')
+    const rx = await bits('tanstack-start')
+    expect(sv.cfg).toContain("config.plugins.push('prettier-plugin-svelte')")
+    expect(rx.cfg).not.toContain('prettier-plugin-svelte')     // react needs no plugin
+    expect(sv.pkg).toContain('prettier-plugin-svelte')
+    expect(rx.pkg).not.toContain('prettier-plugin-svelte')
+    expect(sv.pkg).toContain('"format"')
+    expect(rx.pkg).toContain('"format"')
+    await expect(sv.cfg).toMatchFileSnapshot('./golden/sveltekit.prettier.config.mjs')
+    await expect(rx.cfg).toMatchFileSnapshot('./golden/tanstack.prettier.config.mjs')
+  })
+
+  it('typecheck gates the checker per framework; check no longer leaks from the web brick', async () => {
+    async function full(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-tc-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, eslint: {}, prettier: {}, typecheck: {} }, overrides: {} })
+      return JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts: Record<string, string> }
+    }
+    const sv = await full('sveltekit')
+    const rx = await full('tanstack-start')
+    expect(sv.scripts.typecheck).toContain('svelte-check')
+    expect(rx.scripts.typecheck).toBe('tsc --noEmit')
+    expect(sv.scripts).not.toHaveProperty('check')   // removed from the web brick
+    // same quality surface on both stacks
+    for (const s of ['lint', 'format', 'typecheck']) {
+      expect(sv.scripts).toHaveProperty(s)
+      expect(rx.scripts).toHaveProperty(s)
+    }
+  })
+
+  // a bare sveltekit stack (no typecheck brick) has no `check` script anymore
+  it('[sveltekit] bare framework no longer ships a check script', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-nocheck-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts?: Record<string, string> }
+    expect(pkg.scripts?.check).toBeUndefined()
+  })
+
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {
     const registry = await loadRegistry(bricksDir)
     const r = resolve({ bricks: { compose: {}, vite: {}, tailwind: {} }, overrides: {} }, registry)
@@ -240,6 +316,19 @@ describe('golden files — per framework', () => {
     expect(root).toContain('>>> stacky:app-shell')
     expect(root).toContain('<Outlet />')
     await expect(root).toMatchFileSnapshot('./golden/tanstack.root.tsx')
+  })
+
+  it('each framework owns a flavored tsconfig', async () => {
+    const svDir = await mkdtemp(join(tmpdir(), 'stacky-tsc-sv-'))
+    await converge(svDir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
+    const rxDir = await mkdtemp(join(tmpdir(), 'stacky-tsc-rx-'))
+    await converge(rxDir, { bricks: { vite: {}, 'tanstack-start': {} }, overrides: {} })
+    const svTs = await readFile(join(svDir, 'app/tsconfig.json'), 'utf8')
+    const rxTs = await readFile(join(rxDir, 'app/tsconfig.json'), 'utf8')
+    expect(svTs).toContain('.svelte-kit/tsconfig.json')
+    expect(rxTs).toContain('react-jsx')
+    await expect(svTs).toMatchFileSnapshot('./golden/sveltekit.tsconfig.json')
+    await expect(rxTs).toMatchFileSnapshot('./golden/tanstack.tsconfig.json')
   })
 
   it('[sveltekit] sqlite stack matches the committed goldens', async () => {

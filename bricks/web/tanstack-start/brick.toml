@@ -21,6 +21,10 @@ to   = "app/src/routes/__root.tsx"
 from = "files/index.tsx"
 to   = "app/src/routes/index.tsx"
 
+[[files]]
+from = "files/tsconfig.json"
+to   = "app/tsconfig.json"
+
 [[fragments]]
 target   = "app/package.json"
 from     = "fragments/package.json"

@@ -1,0 +1,15 @@
+[brick]
+name    = "typecheck"
+slot    = "typecheck"
+summary = "Type-checking scripts — svelte-check (Svelte) / tsc --noEmit (React)"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.svelte.json"
+strategy = "json"
+when     = "svelte"
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.react.json"
+strategy = "json"
+when     = "react"

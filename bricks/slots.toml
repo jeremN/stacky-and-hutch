@@ -21,6 +21,21 @@ single = true
 name = "icons"
 single = true
 
+# Linter (ESLint, etc.) — one per project.
+[[slot]]
+name = "lint"
+single = true
+
+# Formatter (Prettier, etc.) — one per project.
+[[slot]]
+name = "format"
+single = true
+
+# Type-checker (svelte-check / tsc) — one per project.
+[[slot]]
+name = "typecheck"
+single = true
+
 [[slot]]
 name = "edge"
 single = true
