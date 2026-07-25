@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind'])
+      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -241,6 +241,32 @@ describe('round trip — both framework stacks', () => {
     expect(rx.pkg).toContain('"format"')
     await expect(sv.cfg).toMatchFileSnapshot('./golden/sveltekit.prettier.config.mjs')
     await expect(rx.cfg).toMatchFileSnapshot('./golden/tanstack.prettier.config.mjs')
+  })
+
+  it('typecheck gates the checker per framework; check no longer leaks from the web brick', async () => {
+    async function full(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-tc-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, eslint: {}, prettier: {}, typecheck: {} }, overrides: {} })
+      return JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts: Record<string, string> }
+    }
+    const sv = await full('sveltekit')
+    const rx = await full('tanstack-start')
+    expect(sv.scripts.typecheck).toContain('svelte-check')
+    expect(rx.scripts.typecheck).toBe('tsc --noEmit')
+    expect(sv.scripts).not.toHaveProperty('check')   // removed from the web brick
+    // same quality surface on both stacks
+    for (const s of ['lint', 'format', 'typecheck']) {
+      expect(sv.scripts).toHaveProperty(s)
+      expect(rx.scripts).toHaveProperty(s)
+    }
+  })
+
+  // a bare sveltekit stack (no typecheck brick) has no `check` script anymore
+  it('[sveltekit] bare framework no longer ships a check script', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-nocheck-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {} }, overrides: {} })
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as { scripts?: Record<string, string> }
+    expect(pkg.scripts?.check).toBeUndefined()
   })
 
   it('adding a styling brick with no framework is ambiguous (pick a framework)', async () => {

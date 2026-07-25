@@ -31,6 +31,11 @@ single = true
 name = "format"
 single = true
 
+# Type-checker (svelte-check / tsc) — one per project.
+[[slot]]
+name = "typecheck"
+single = true
+
 [[slot]]
 name = "edge"
 single = true

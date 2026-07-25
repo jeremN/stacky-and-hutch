@@ -11,7 +11,7 @@ describe('real registry', () => {
   it('loads all bricks', async () => {
     const reg = await loadRegistry(bricksDir)
     expect([...reg.bricks.keys()].sort())
-      .toEqual(['caddy', 'compose', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'sveltekit', 'tailwind', 'tanstack-start', 'vite'])
+      .toEqual(['caddy', 'compose', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'sveltekit', 'tailwind', 'tanstack-start', 'typecheck', 'vite'])
   })
 
   it('resolves the full stack, inferring vite and compose', async () => {

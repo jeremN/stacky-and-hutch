@@ -1,0 +1,4 @@
+{
+  "scripts": { "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json" },
+  "devDependencies": { "svelte-check": "^4.0.0" }
+}
