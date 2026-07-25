@@ -85,6 +85,16 @@ describe('round trip — both framework stacks', () => {
     }
   })
 
+  it('[sveltekit] better-auth mounts a catch-all route + svelte client', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-auth-sv-'))
+    await converge(dir, { bricks: { vite: {}, sveltekit: {}, postgres: {}, 'better-auth': {} }, overrides: {} })
+    const client = await readFile(join(dir, 'app/src/lib/auth-client.ts'), 'utf8')
+    const route = await readFile(join(dir, 'app/src/routes/api/auth/[...all]/+server.ts'), 'utf8')
+    expect(client).toContain("from 'better-auth/svelte'")
+    expect(route).toContain('auth.handler(request)')
+    expect(route).toContain("from '$lib/auth'")
+  })
+
   for (const fw of FRAMEWORKS) {
     it(`[${fw}] swapping the db engine round-trips byte for byte`, async () => {
       const dir = await mkdtemp(join(tmpdir(), `stacky-swap-${fw}-`))

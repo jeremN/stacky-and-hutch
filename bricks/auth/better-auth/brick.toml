@@ -29,3 +29,12 @@ strategy = "json"
 target   = "config/.env.example"
 from     = "fragments/env"
 strategy = "lines"
+
+[[files]]
+from = "files/auth-client.svelte.ts"
+to   = "app/src/lib/auth-client.ts"
+when = "svelte"
+[[files]]
+from = "files/route.svelte.ts"
+to   = "app/src/routes/api/auth/[...all]/+server.ts"
+when = "svelte"
