@@ -54,3 +54,8 @@ single = true
 [[slot]]
 name = "orm"
 single = true
+
+# Application auth (better-auth, etc.) — one per project.
+[[slot]]
+name = "auth"
+single = true

@@ -1,0 +1,31 @@
+[brick]
+name    = "better-auth"
+slot    = "auth"
+summary = "better-auth email/password — engine-gated server (built-in adapter) + gated framework client/route"
+
+[requires]
+sql-db = "*"
+
+[[files]]
+from = "files/auth.pg.ts"
+to   = "app/src/lib/auth.ts"
+when = "pg-driver"
+[[files]]
+from = "files/auth.sqlite.ts"
+to   = "app/src/lib/auth.ts"
+when = "sqlite-driver"
+
+[[injection_points]]
+name   = "auth-plugins"
+target = "app/src/lib/auth.ts"
+marker = "stacky:auth-plugins"
+
+[[fragments]]
+target   = "app/package.json"
+from     = "fragments/package.json"
+strategy = "json"
+
+[[fragments]]
+target   = "config/.env.example"
+from     = "fragments/env"
+strategy = "lines"

@@ -34,7 +34,7 @@ describe('round trip — both framework stacks', () => {
         .filter((b) => !FOUNDATION.has(b.name) && b.slot !== 'web')
         .map((b) => b.name)
         .sort()
-      expect(removable).toEqual(['caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck', 'vitest'])
+      expect(removable).toEqual(['better-auth', 'caddy', 'drizzle', 'eslint', 'iconify', 'postgres', 'prettier', 'sqlite', 'tailwind', 'typecheck', 'vitest'])
 
       for (const brick of removable) {
         // A brick that needs a database engine can't be added alone (two engines => ambiguous),
@@ -61,6 +61,29 @@ describe('round trip — both framework stacks', () => {
       }
     })
   }
+
+  it('better-auth server is engine-gated (Pool for pg, Database for sqlite)', async () => {
+    async function authFile(engine: 'postgres' | 'sqlite') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-auth-${engine}-`))
+      await converge(dir, { bricks: { vite: {}, sveltekit: {}, [engine]: {}, 'better-auth': {} }, overrides: {} })
+      const src = await readFile(join(dir, 'app/src/lib/auth.ts'), 'utf8')
+      const pkg = await readFile(join(dir, 'app/package.json'), 'utf8')
+      const env = await readFile(join(dir, 'config/.env.example'), 'utf8')
+      return { src, pkg, env }
+    }
+    const pg = await authFile('postgres')
+    const sq = await authFile('sqlite')
+    expect(pg.src).toContain("import { Pool } from 'pg'")
+    expect(pg.src).toContain('new Pool(')
+    expect(sq.src).toContain("import Database from 'better-sqlite3'")
+    expect(sq.src).toContain('new Database(')
+    for (const { src, pkg, env } of [pg, sq]) {
+      expect(src).toContain('emailAndPassword: { enabled: true }')
+      expect(src).toContain('>>> stacky:auth-plugins')
+      expect(pkg).toContain('better-auth')
+      expect(env).toContain('BETTER_AUTH_SECRET')
+    }
+  })
 
   for (const fw of FRAMEWORKS) {
     it(`[${fw}] swapping the db engine round-trips byte for byte`, async () => {
