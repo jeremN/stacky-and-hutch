@@ -4,13 +4,20 @@ import { Icon } from '@iconify/react'
 // <<< stacky:app-head
 import {
   Outlet,
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+// >>> stacky:root-imports
+// <<< stacky:root-imports
 
-export const Route = createRootRoute({
+type RouterContext = object & {
+  // >>> stacky:root-context
+  // <<< stacky:root-context
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

@@ -2,12 +2,21 @@
 // (there is no standalone generator command); run a build/dev before `pnpm typecheck`.
 import { createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
+// >>> stacky:router-imports
+// <<< stacky:router-imports
 
 export function getRouter() {
+  // >>> stacky:router-setup
+  // <<< stacky:router-setup
   const router = createRouter({
     routeTree,
     scrollRestoration: true,
+    context: {
+      // >>> stacky:router-context
+      // <<< stacky:router-context
+    },
   })
-
+  // >>> stacky:router-wrap
+  // <<< stacky:router-wrap
   return router
 }
