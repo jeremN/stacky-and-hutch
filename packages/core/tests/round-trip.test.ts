@@ -95,6 +95,46 @@ describe('round trip — both framework stacks', () => {
     expect(route).toContain("from '$lib/auth'")
   })
 
+  it('[tanstack-start] better-auth mounts a route + react client + cookie plugin', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'stacky-auth-rx-'))
+    await converge(dir, { bricks: { vite: {}, 'tanstack-start': {}, postgres: {}, 'better-auth': {} }, overrides: {} })
+    const client = await readFile(join(dir, 'app/src/lib/auth-client.ts'), 'utf8')
+    const route = await readFile(join(dir, 'app/src/routes/api/auth/$.ts'), 'utf8')
+    const src = await readFile(join(dir, 'app/src/lib/auth.ts'), 'utf8')
+    expect(client).toContain("from 'better-auth/react'")
+    expect(route).toContain("createFileRoute('/api/auth/$')")
+    expect(src).toContain('tanstackStartCookies()')
+  })
+
+  it('better-auth gives both stacks auth with framework-correct client + route (parity)', async () => {
+    async function bits(fw: 'sveltekit' | 'tanstack-start') {
+      const dir = await mkdtemp(join(tmpdir(), `stacky-auth-parity-${fw}-`))
+      await converge(dir, { bricks: { vite: {}, [fw]: {}, postgres: {}, 'better-auth': {} }, overrides: {} })
+      const client = await readFile(join(dir, 'app/src/lib/auth-client.ts'), 'utf8')
+      const src = await readFile(join(dir, 'app/src/lib/auth.ts'), 'utf8')
+      const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf8')) as {
+        dependencies: Record<string, string>
+      }
+      return { client, src, pkg, dir }
+    }
+    const sv = await bits('sveltekit')
+    const rx = await bits('tanstack-start')
+    // both get better-auth
+    expect(sv.pkg.dependencies).toHaveProperty('better-auth')
+    expect(rx.pkg.dependencies).toHaveProperty('better-auth')
+    // right client import per framework, wrong absent
+    expect(sv.client).toContain('better-auth/svelte')
+    expect(sv.client).not.toContain('better-auth/react')
+    expect(rx.client).toContain('better-auth/react')
+    expect(rx.client).not.toContain('better-auth/svelte')
+    // the tanstack cookie plugin is gated to react only
+    expect(sv.src).not.toContain('tanstackStartCookies')
+    expect(rx.src).toContain('tanstackStartCookies()')
+    // committed goldens for the composed auth.ts (seam empty on svelte, cookie push on react)
+    await expect(sv.src).toMatchFileSnapshot('./golden/sveltekit.auth.ts')
+    await expect(rx.src).toMatchFileSnapshot('./golden/tanstack.auth.ts')
+  })
+
   for (const fw of FRAMEWORKS) {
     it(`[${fw}] swapping the db engine round-trips byte for byte`, async () => {
       const dir = await mkdtemp(join(tmpdir(), `stacky-swap-${fw}-`))
